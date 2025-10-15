@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 import '../models/api_response.dart';
 import '../utils/constants.dart';
+import '../utils/app_error.dart';
 
 class ApiService {
   static final ApiService _instance = ApiService._internal();
@@ -77,7 +78,7 @@ class ApiService {
     } on DioException catch (e) {
       throw _handleDioError(e);
     } catch (e) {
-      throw Exception('Error inesperado: $e');
+      throw AppError.unknown();
     }
   }
 
@@ -99,7 +100,7 @@ class ApiService {
     } on DioException catch (e) {
       throw _handleDioError(e);
     } catch (e) {
-      throw Exception('Error inesperado: $e');
+      throw AppError.unknown();
     }
   }
 
@@ -121,7 +122,7 @@ class ApiService {
     } on DioException catch (e) {
       throw _handleDioError(e);
     } catch (e) {
-      throw Exception('Error inesperado: $e');
+      throw AppError.unknown();
     }
   }
 
@@ -143,7 +144,7 @@ class ApiService {
     } on DioException catch (e) {
       throw _handleDioError(e);
     } catch (e) {
-      throw Exception('Error inesperado: $e');
+      throw AppError.unknown();
     }
   }
 
@@ -165,53 +166,78 @@ class ApiService {
     } on DioException catch (e) {
       throw _handleDioError(e);
     } catch (e) {
-      throw Exception('Error inesperado: $e');
+      throw AppError.unknown();
     }
   }
 
-  /// Maneja errores de Dio y los convierte en excepciones amigables
-  Exception _handleDioError(DioException error) {
+  /// Maneja errores de Dio y los convierte en AppError amigables
+  AppError _handleDioError(DioException error) {
     switch (error.type) {
       case DioExceptionType.connectionTimeout:
       case DioExceptionType.sendTimeout:
       case DioExceptionType.receiveTimeout:
-        return Exception(AppConstants.networkError);
+        return AppError.network();
       
       case DioExceptionType.connectionError:
-        return Exception(AppConstants.networkError);
+        return AppError.network();
       
       case DioExceptionType.badResponse:
         final statusCode = error.response?.statusCode;
         final responseData = error.response?.data;
         
+        // Si el backend envía un error estructurado, usarlo
         if (responseData is Map<String, dynamic> && responseData['error'] != null) {
           final apiError = ApiError.fromJson(responseData['error']);
-          return Exception(apiError.message);
+          return AppError.fromApiError(apiError);
         }
         
+        // Manejar códigos de estado HTTP específicos
         switch (statusCode) {
           case 400:
-            return Exception('Solicitud inválida');
+            return const AppError(
+              message: 'Solicitud inválida',
+              code: 'BAD_REQUEST',
+              statusCode: 400,
+            );
           case 401:
-            return Exception('No autorizado');
+            return const AppError(
+              message: 'No autorizado',
+              code: 'UNAUTHORIZED',
+              statusCode: 401,
+            );
           case 403:
-            return Exception('Acceso denegado');
+            return const AppError(
+              message: 'Acceso denegado',
+              code: 'FORBIDDEN',
+              statusCode: 403,
+            );
           case 404:
-            return Exception('Recurso no encontrado');
+            return const AppError(
+              message: 'Recurso no encontrado',
+              code: 'NOT_FOUND',
+              statusCode: 404,
+            );
           case 422:
-            return Exception('Datos de entrada inválidos');
+            return const AppError(
+              message: 'Datos de entrada inválidos',
+              code: 'VALIDATION_ERROR',
+              statusCode: 422,
+            );
           case 500:
-            return Exception(AppConstants.serverError);
+            return AppError.server();
           default:
-            return Exception(AppConstants.serverError);
+            return AppError.server();
         }
       
       case DioExceptionType.cancel:
-        return Exception('Solicitud cancelada');
+        return const AppError(
+          message: 'Solicitud cancelada',
+          code: 'REQUEST_CANCELLED',
+        );
       
       case DioExceptionType.unknown:
       default:
-        return Exception(AppConstants.unknownError);
+        return AppError.unknown();
     }
   }
 

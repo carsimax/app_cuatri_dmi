@@ -156,17 +156,19 @@ class HomeScreen extends StatelessWidget {
                 const SizedBox(height: 24),
 
                 // Botones de acción
-                Row(
+                Column(
                   children: [
-                    Expanded(
+                    SizedBox(
+                      width: double.infinity,
                       child: CustomButton.secondary(
                         text: 'Actualizar Perfil',
                         onPressed: () => _showUpdateProfileDialog(context),
                         icon: const Icon(Icons.edit),
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
                       child: CustomButton.secondary(
                         text: 'Cambiar Contraseña',
                         onPressed: () => _showChangePasswordDialog(context),

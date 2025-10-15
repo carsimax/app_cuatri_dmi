@@ -1,6 +1,7 @@
 import '../models/user.dart';
 import '../models/auth_response.dart';
 import '../utils/constants.dart';
+import '../utils/app_error.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
 
@@ -80,7 +81,7 @@ class AuthService {
     try {
       final token = await _storageService.getToken();
       if (token == null) {
-        throw Exception('No hay token de autenticación');
+        throw AppError.authentication('No hay token de autenticación');
       }
 
       // Configurar token en las peticiones
@@ -96,7 +97,7 @@ class AuthService {
         await _storageService.saveUser(response.data!);
         return response.data!;
       } else {
-        throw Exception(response.message ?? 'Error al obtener perfil');
+        throw AppError.unknown();
       }
     } catch (e) {
       rethrow;
@@ -187,7 +188,7 @@ class AuthService {
     try {
       final token = await _storageService.getToken();
       if (token == null) {
-        throw Exception('No hay token de autenticación');
+        throw AppError.authentication('No hay token de autenticación');
       }
 
       _apiService.setAuthToken(token);
@@ -223,7 +224,7 @@ class AuthService {
     try {
       final token = await _storageService.getToken();
       if (token == null) {
-        throw Exception('No hay token de autenticación');
+        throw AppError.authentication('No hay token de autenticación');
       }
 
       _apiService.setAuthToken(token);

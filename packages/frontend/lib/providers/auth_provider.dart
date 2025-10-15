@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../models/user.dart';
 import '../services/auth_service.dart';
+import '../utils/app_error.dart';
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
@@ -73,7 +74,7 @@ class AuthProvider extends ChangeNotifier {
       
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(_getErrorMessage(e));
       return false;
     } finally {
       _setLoading(false);
@@ -103,7 +104,7 @@ class AuthProvider extends ChangeNotifier {
       
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(_getErrorMessage(e));
       return false;
     } finally {
       _setLoading(false);
@@ -164,7 +165,7 @@ class AuthProvider extends ChangeNotifier {
       _setUser(updatedUser);
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(_getErrorMessage(e));
       return false;
     } finally {
       _setLoading(false);
@@ -192,7 +193,7 @@ class AuthProvider extends ChangeNotifier {
       
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(_getErrorMessage(e));
       return false;
     } finally {
       _setLoading(false);
@@ -213,7 +214,7 @@ class AuthProvider extends ChangeNotifier {
       _setUser(user);
       return true;
     } catch (e) {
-      _setError(e.toString());
+      _setError(_getErrorMessage(e));
       return false;
     } finally {
       _setLoading(false);
@@ -276,6 +277,17 @@ class AuthProvider extends ChangeNotifier {
   void _clearError() {
     _error = null;
     notifyListeners();
+  }
+
+  /// Convierte cualquier error a un mensaje amigable
+  String _getErrorMessage(dynamic error) {
+    if (error is AppError) {
+      return error.message;
+    } else if (error is Exception) {
+      return error.toString().replaceFirst('Exception: ', '');
+    } else {
+      return 'Error inesperado. Intenta nuevamente.';
+    }
   }
 
 }

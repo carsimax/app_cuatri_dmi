@@ -20,8 +20,21 @@ class MainApp extends StatelessWidget {
       child: MaterialApp(
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
+        // Configuración del tema - Cambiar seedColor para cambiar esquema de colores
         theme: ThemeData(
           useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.blue, // Cambiar este color para cambiar todo el esquema
+            brightness: Brightness.light,
+          ),
+        ),
+        // Tema oscuro opcional
+        darkTheme: ThemeData(
+          useMaterial3: true,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: Colors.blue, // Mismo color para tema oscuro
+            brightness: Brightness.dark,
+          ),
         ),
         home: const SplashScreen(),
       ),
