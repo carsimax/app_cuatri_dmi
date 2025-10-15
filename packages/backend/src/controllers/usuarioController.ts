@@ -64,7 +64,7 @@ export const getUsuario = asyncHandler(async (req: Request, res: Response) => {
 
 // Crear un nuevo usuario
 export const createUsuario = asyncHandler(async (req: Request, res: Response) => {
-  const { email, nombre, apellido, activo = true }: CreateUsuarioDto = req.body;
+  const { email, password, nombre, apellido, activo = true }: CreateUsuarioDto = req.body;
 
   // Verificar si el email ya existe
   const existingUsuario = await prisma.usuario.findUnique({
@@ -78,6 +78,7 @@ export const createUsuario = asyncHandler(async (req: Request, res: Response) =>
   const usuario = await prisma.usuario.create({
     data: {
       email,
+      password,
       nombre,
       apellido,
       activo,

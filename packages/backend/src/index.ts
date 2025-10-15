@@ -10,6 +10,7 @@ import { createSuccessResponse } from './models/ApiResponse';
 
 // Importar rutas
 import usuarioRoutes from './routes/usuarioRoutes';
+import authRoutes from './routes/authRoutes';
 
 const app = express();
 
@@ -103,6 +104,7 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       usuarios: '/api/usuarios',
+      auth: '/api/auth',
       documentacion: '/api/docs'
     },
     features: [
@@ -120,6 +122,7 @@ app.get('/', (req, res) => {
 
 // Rutas de la API
 app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/auth', authRoutes);
 
 // Middleware de manejo de errores (debe ir al final)
 app.use(errorHandler);
