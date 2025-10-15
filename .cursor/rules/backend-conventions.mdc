@@ -1,8 +1,6 @@
 ---
-globs: packages/backend/**/*.ts,packages/backend/**/*.js
-description: Convenciones de código para el backend Express + TypeScript
+alwaysApply: true
 ---
-
 # Convenciones de Backend
 
 Este documento define las convenciones y mejores prácticas para el desarrollo del backend.

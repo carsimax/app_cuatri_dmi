@@ -1,7 +1,6 @@
 ---
-description: Patrones y estructura de la API REST
+alwaysApply: true
 ---
-
 # Patrones de API
 
 Esta API REST sigue un diseño **BFF (Backend For Frontend)** optimizado para Flutter con Dio.

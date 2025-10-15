@@ -1,8 +1,6 @@
 ---
-globs: packages/frontend/**/*.dart
-description: Convenciones de código para el frontend Flutter
+alwaysApply: true
 ---
-
 # Convenciones de Frontend Flutter
 
 Este documento define las convenciones y mejores prácticas para el desarrollo del frontend Flutter.

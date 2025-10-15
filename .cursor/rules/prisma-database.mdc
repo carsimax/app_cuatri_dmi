@@ -1,8 +1,6 @@
 ---
-globs: packages/backend/prisma/**/*,packages/backend/src/config/database.ts
-description: Configuración y patrones de uso de Prisma ORM
+alwaysApply: true
 ---
-
 # Prisma Database
 
 Esta aplicación usa **Prisma ORM** con **SQLite** para la persistencia de datos.
