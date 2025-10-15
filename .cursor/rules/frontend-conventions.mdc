@@ -1,0 +1,50 @@
+---
+alwaysApply: true
+---
+# Convenciones del Frontend (Flutter)
+
+## Estructura de archivos
+- El punto de entrada es [main.dart](mdc:packages/frontend/lib/main.dart)
+- Organizar código en carpetas dentro de `lib/`:
+  - `screens/` - Pantallas de la aplicación
+  - `widgets/` - Widgets reutilizables
+  - `models/` - Modelos de datos
+  - `services/` - Servicios (API, base de datos local, etc.)
+  - `providers/` o `bloc/` - Gestión de estado
+  - `utils/` - Utilidades y helpers
+
+## Patrones de código
+
+### Widgets
+- Usar `const` constructors cuando sea posible para optimización
+- Preferir StatelessWidget sobre StatefulWidget cuando no haya estado
+- Extraer widgets complejos a archivos separados
+
+### Nomenclatura
+- Clases: PascalCase (ej: `MiWidget`)
+- Archivos: snake_case (ej: `mi_widget.dart`)
+- Variables y funciones: camelCase (ej: `miVariable`)
+- Constantes: camelCase con const (ej: `const miConstante`)
+
+### Material Design
+- Usar Material 3 (`useMaterial3: true`)
+- Usar ThemeData para temas consistentes
+- Aprovechar widgets de Material Design
+
+### Gestión de estado
+- Para estado simple: setState
+- Para estado complejo: Provider, Riverpod, Bloc, o similar
+- Mantener la lógica de negocio separada de la UI
+
+### Comunicación con Backend
+- Crear un servicio dedicado para llamadas API
+- Usar http o dio para peticiones HTTP
+- Endpoint base del backend: `http://localhost:3000/api`
+- Manejar errores de red apropiadamente
+
+### Buenas prácticas
+- Comentar código complejo en español
+- Usar nombres descriptivos
+- Evitar widgets muy anidados (extraer a funciones/widgets)
+- Usar async/await para operaciones asíncronas
+- Manejar estados de carga y error en la UI

@@ -1,0 +1,47 @@
+---
+alwaysApply: true
+---
+# Estructura del Proyecto
+
+Este es un monorepo con dos paquetes principales:
+
+## Backend (`packages/backend`)
+- **Framework**: Express.js con TypeScript
+- **Base de datos**: SQLite con Prisma ORM
+- **Punto de entrada**: [packages/backend/src/index.ts](mdc:packages/backend/src/index.ts)
+- **Configuración**: 
+  - Variables de entorno: [packages/backend/src/config/env.ts](mdc:packages/backend/src/config/env.ts)
+  - Base de datos: [packages/backend/src/config/database.ts](mdc:packages/backend/src/config/database.ts)
+  - Schema Prisma: [packages/backend/prisma/schema.prisma](mdc:packages/backend/prisma/schema.prisma)
+
+### Estructura del Backend
+```
+src/
+├── config/          # Configuración de la aplicación
+├── controllers/     # Controladores de rutas
+├── models/          # Tipos y DTOs de TypeScript
+├── routes/          # Definición de rutas Express
+└── middlewares/     # Middlewares personalizados
+```
+
+## Frontend (`packages/frontend`)
+- **Framework**: Flutter (Dart)
+- **Punto de entrada**: [packages/frontend/lib/main.dart](mdc:packages/frontend/lib/main.dart)
+- **Configuración**: [packages/frontend/pubspec.yaml](mdc:packages/frontend/pubspec.yaml)
+
+## Comandos útiles
+
+### Backend
+- `npm run dev` - Modo desarrollo con hot reload
+- `npm run build` - Compilar TypeScript
+- `npm run prisma:migrate` - Ejecutar migraciones
+- `npm run prisma:studio` - Interfaz gráfica de la BD
+
+### Frontend
+- `flutter run` - Ejecutar la aplicación
+- `flutter build` - Compilar la aplicación
+
+## Convenciones generales
+- El código debe estar en español (comentarios, nombres de variables, mensajes)
+- Usar nomenclatura descriptiva y semántica
+- Mantener la consistencia con el código existente

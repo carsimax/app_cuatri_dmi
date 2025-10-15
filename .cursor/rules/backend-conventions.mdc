@@ -1,0 +1,56 @@
+---
+alwaysApply: true
+---
+# Convenciones del Backend
+
+## Estructura de archivos
+- Los controladores van en `src/controllers/`
+- Las rutas van en `src/routes/`
+- Los modelos y DTOs van en `src/models/`
+- Los middlewares van en `src/middlewares/`
+- La configuración va en `src/config/`
+
+## Patrones de código
+
+### Controladores
+- Usar `asyncHandler` para manejar errores automáticamente
+- Devolver siempre objetos con estructura consistente:
+```typescript
+{
+  success: boolean,
+  data?: any,
+  message?: string,
+  error?: { message: string, statusCode: number }
+}
+```
+
+### Manejo de errores
+- Usar `createError(message, statusCode)` para errores personalizados
+- Los errores se manejan automáticamente por el middleware [errorHandler](mdc:packages/backend/src/middlewares/errorHandler.ts)
+
+### Validaciones
+- Validar IDs numéricos con `parseInt()` y verificar con `isNaN()`
+- Validar campos requeridos antes de operaciones de BD
+- Verificar existencia de registros antes de actualizar/eliminar
+- Verificar unicidad de emails u otros campos únicos
+
+### Prisma
+- Importar siempre desde: `import { prisma } from '../config/database'`
+- Usar métodos de Prisma: `findMany`, `findUnique`, `create`, `update`, `delete`
+- Ordenar resultados con `orderBy` cuando sea apropiado
+
+### TypeScript
+- Tipar todas las funciones y variables
+- Usar interfaces para DTOs (CreateDto, UpdateDto)
+- Importar tipos de Express: `Request`, `Response`
+
+### Respuestas HTTP
+- 200: OK (operaciones exitosas)
+- 201: Created (recursos creados)
+- 400: Bad Request (validación fallida)
+- 404: Not Found (recurso no encontrado)
+- 409: Conflict (conflicto de unicidad)
+- 500: Internal Server Error (errores del servidor)
+
+## Ejemplo de controlador
+Ver [usuarioController.ts](mdc:packages/backend/src/controllers/usuarioController.ts) como referencia.

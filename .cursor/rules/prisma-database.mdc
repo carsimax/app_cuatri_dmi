@@ -1,0 +1,69 @@
+---
+alwaysApply: true
+---
+# Prisma y Base de Datos
+
+## Schema de Prisma
+El archivo [schema.prisma](mdc:packages/backend/prisma/schema.prisma) define la estructura de la base de datos.
+
+## Workflow de cambios en la BD
+
+1. **Modificar schema.prisma**: Agregar o modificar modelos
+2. **Crear migración**: `npm run prisma:migrate`
+   - Esto crea SQL y actualiza la BD
+3. **Generar cliente**: `npm run prisma:generate` (opcional, se hace automáticamente)
+4. **Actualizar tipos TypeScript**: Los tipos se generan automáticamente
+
+## Convenciones de modelos
+
+### Nombres
+- Modelo en singular: `Usuario`, `Producto`
+- Tabla en plural: `@@map("usuarios")`, `@@map("productos")`
+
+### Campos estándar
+Incluir en todos los modelos:
+```prisma
+id        Int      @id @default(autoincrement())
+activo    Boolean  @default(true)
+createdAt DateTime @default(now())
+updatedAt DateTime @updatedAt
+```
+
+### Tipos de datos SQLite
+- `Int` - Enteros
+- `String` - Texto
+- `Float` - Números decimales
+- `Boolean` - Verdadero/falso
+- `DateTime` - Fecha y hora
+
+### Modificadores
+- `@id` - Clave primaria
+- `@unique` - Valor único
+- `@default(value)` - Valor por defecto
+- `?` - Campo opcional (nullable)
+
+## Comandos útiles
+
+- `npm run prisma:studio` - Interfaz gráfica para ver/editar datos
+- `npm run prisma:migrate` - Crear y aplicar migración
+- `npm run prisma:generate` - Regenerar cliente Prisma
+- `npm run prisma:reset` - Reset completo de la BD (¡cuidado!)
+
+## Acceso a la BD en código
+
+```typescript
+import { prisma } from '../config/database';
+
+// Operaciones CRUD
+await prisma.usuario.findMany()
+await prisma.usuario.findUnique({ where: { id } })
+await prisma.usuario.create({ data: { ... } })
+await prisma.usuario.update({ where: { id }, data: { ... } })
+await prisma.usuario.delete({ where: { id } })
+```
+
+## Relaciones
+Cuando agregues relaciones entre modelos:
+- Usa `@relation` para definir relaciones
+- Define claves foráneas explícitamente
+- Considera índices para campos relacionados

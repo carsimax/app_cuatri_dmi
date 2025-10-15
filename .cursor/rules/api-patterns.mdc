@@ -1,0 +1,97 @@
+---
+alwaysApply: true
+---
+# Patrones de API REST
+
+## Endpoints disponibles
+
+### Usuarios (`/api/usuarios`)
+- `GET /api/usuarios` - Obtener todos los usuarios
+- `GET /api/usuarios/:id` - Obtener un usuario por ID
+- `POST /api/usuarios` - Crear un nuevo usuario
+- `PUT /api/usuarios/:id` - Actualizar un usuario
+- `DELETE /api/usuarios/:id` - Eliminar un usuario
+
+### Productos (`/api/productos`)
+- `GET /api/productos` - Obtener todos los productos
+- `GET /api/productos/:id` - Obtener un producto por ID
+- `POST /api/productos` - Crear un nuevo producto
+- `PUT /api/productos/:id` - Actualizar un producto
+- `DELETE /api/productos/:id` - Eliminar un producto
+
+## Estructura de respuestas
+
+### Respuesta exitosa (200, 201)
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Operación exitosa" // opcional
+}
+```
+
+### Respuesta de lista
+```json
+{
+  "success": true,
+  "data": [...],
+  "count": 10
+}
+```
+
+### Respuesta de error (4xx, 5xx)
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Descripción del error",
+    "statusCode": 400
+  }
+}
+```
+
+## Modelos de datos
+
+### Usuario
+```typescript
+{
+  id: number
+  email: string (único)
+  nombre: string
+  apellido: string
+  activo: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+### Producto
+```typescript
+{
+  id: number
+  nombre: string
+  descripcion: string | null
+  precio: number
+  stock: number
+  activo: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+```
+
+## Flujo para crear nuevos endpoints
+
+1. **Definir el modelo en Prisma** ([schema.prisma](mdc:packages/backend/prisma/schema.prisma))
+2. **Ejecutar migración**: `npm run prisma:migrate`
+3. **Crear tipos/DTOs** en `src/models/`
+4. **Crear controlador** en `src/controllers/` siguiendo el patrón de [usuarioController.ts](mdc:packages/backend/src/controllers/usuarioController.ts)
+5. **Crear rutas** en `src/routes/`
+6. **Registrar rutas** en [index.ts](mdc:packages/backend/src/index.ts)
+
+## Middlewares aplicados
+
+- **helmet**: Seguridad HTTP headers
+- **cors**: Control de acceso CORS
+- **express.json()**: Parsing de JSON (límite 10mb)
+- **logger**: Logging de peticiones (ver [logger.ts](mdc:packages/backend/src/middlewares/logger.ts))
+- **errorHandler**: Manejo centralizado de errores (ver [errorHandler.ts](mdc:packages/backend/src/middlewares/errorHandler.ts))
