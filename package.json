@@ -1,0 +1,19 @@
+{
+  "name": "app-cuatri",
+  "version": "1.0.0",
+  "description": "Aplicación fullstack con Flutter frontend y Express backend",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "dev:backend": "cd packages/backend && npm run dev",
+    "dev:frontend": "cd packages/frontend && flutter run",
+    "install:all": "npm install && cd packages/backend && npm install",
+    "build:backend": "cd packages/backend && npm run build",
+    "start:backend": "cd packages/backend && npm start"
+  },
+  "keywords": ["monorepo", "flutter", "express", "typescript", "sqlite"],
+  "author": "",
+  "license": "MIT"
+}
