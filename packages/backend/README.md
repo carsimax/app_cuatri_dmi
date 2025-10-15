@@ -1,17 +1,21 @@
-# Backend Express con TypeScript y SQLite
+# BFF para Flutter con Dio
 
-Un backend robusto construido con Express.js, TypeScript y SQLite usando Prisma ORM.
+Backend For Frontend (BFF) optimizado para Flutter con Dio, desarrollado con Express.js, TypeScript y SQLite usando Prisma como ORM.
 
 ## 🚀 Características
 
-- **Express.js** - Framework web rápido y minimalista
-- **TypeScript** - Tipado estático para JavaScript
-- **SQLite** - Base de datos ligera para desarrollo
-- **Prisma ORM** - ORM moderno y type-safe
-- **Middleware de seguridad** - Helmet, CORS
-- **Manejo de errores** - Sistema robusto de manejo de errores
-- **Logging** - Sistema de logging personalizado
-- **Hot reload** - Desarrollo con recarga automática
+- **BFF optimizado** para Flutter con Dio
+- **Express.js** con TypeScript
+- **SQLite** como base de datos
+- **Prisma** como ORM
+- **Validación** robusta con express-validator
+- **Paginación** automática en todos los endpoints
+- **Upload de archivos** con Multer
+- **Respuestas estandarizadas** compatibles con Dio
+- **Logging** estructurado con Pino
+- **Manejo de errores** centralizado y mapeado
+- **CORS** configurado para Flutter (emuladores y dispositivos)
+- **Helmet** para seguridad
 
 ## 📁 Estructura del Proyecto
 
@@ -20,23 +24,29 @@ packages/backend/
 ├── src/
 │   ├── config/
 │   │   ├── database.ts      # Configuración de Prisma
-│   │   └── env.ts          # Variables de entorno
+│   │   ├── env.ts          # Variables de entorno
+│   │   └── multer.ts       # Configuración de uploads
 │   ├── controllers/
-│   │   ├── usuarioController.ts
-│   │   └── productoController.ts
+│   │   └── usuarioController.ts
 │   ├── middlewares/
-│   │   ├── errorHandler.ts  # Manejo de errores
-│   │   └── logger.ts        # Sistema de logging
+│   │   ├── errorHandler.ts  # Manejo de errores mejorado
+│   │   ├── logger.ts        # Sistema de logging con Pino
+│   │   ├── validator.ts     # Middleware de validación
+│   │   └── upload.ts        # Middleware de uploads
 │   ├── models/
 │   │   ├── Usuario.ts       # Tipos de Usuario
-│   │   └── Producto.ts      # Tipos de Producto
+│   │   └── ApiResponse.ts   # Tipos de respuesta para Dio
 │   ├── routes/
-│   │   ├── usuarioRoutes.ts
-│   │   └── productoRoutes.ts
+│   │   └── usuarioRoutes.ts
+│   ├── validators/
+│   │   └── usuarioValidator.ts # Validadores express-validator
+│   ├── utils/
+│   │   └── pagination.ts    # Utilidades de paginación
 │   └── index.ts             # Punto de entrada
 ├── prisma/
 │   ├── migrations/          # Migraciones de base de datos
 │   └── schema.prisma        # Esquema de Prisma
+├── uploads/                 # Directorio de archivos subidos
 ├── .env                     # Variables de entorno
 ├── package.json
 ├── tsconfig.json
@@ -57,13 +67,14 @@ packages/backend/
 
 3. **Configurar variables de entorno:**
    ```bash
-   cp env.example .env
+   cp .env.example .env
+   # Editar .env con tus configuraciones
    ```
 
 4. **Configurar la base de datos:**
    ```bash
-   npm run prisma:generate
    npm run prisma:migrate
+   npm run prisma:generate
    ```
 
 ## 🚀 Uso
@@ -97,18 +108,169 @@ npm start
 - `GET /` - Información de la API
 
 ### Usuarios
-- `GET /api/usuarios` - Obtener todos los usuarios
-- `GET /api/usuarios/:id` - Obtener usuario por ID
-- `POST /api/usuarios` - Crear nuevo usuario
-- `PUT /api/usuarios/:id` - Actualizar usuario
-- `DELETE /api/usuarios/:id` - Eliminar usuario
+- `GET /api/usuarios` - Obtener todos los usuarios (con paginación y filtros)
+- `GET /api/usuarios/:id` - Obtener un usuario por ID
+- `POST /api/usuarios` - Crear un nuevo usuario
+- `PUT /api/usuarios/:id` - Actualizar un usuario
+- `PATCH /api/usuarios/:id/toggle-activo` - Activar/desactivar usuario
+- `DELETE /api/usuarios/:id` - Eliminar un usuario
+- `GET /api/usuarios/search?q=termino` - Búsqueda avanzada
+- `GET /api/usuarios/stats` - Estadísticas de usuarios
 
-### Productos
-- `GET /api/productos` - Obtener todos los productos
-- `GET /api/productos/:id` - Obtener producto por ID
-- `POST /api/productos` - Crear nuevo producto
-- `PUT /api/productos/:id` - Actualizar producto
-- `DELETE /api/productos/:id` - Eliminar producto
+## 📱 Uso con Flutter/Dio
+
+### Configuración básica de Dio
+
+```dart
+final dio = Dio(BaseOptions(
+  baseUrl: 'http://10.0.2.2:3000/api', // Emulador Android
+  // baseUrl: 'http://localhost:3000/api', // iOS Simulator
+  connectTimeout: Duration(seconds: 5),
+  receiveTimeout: Duration(seconds: 3),
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+));
+```
+
+### Ejemplo de consumo
+
+```dart
+// Obtener usuarios con paginación
+final response = await dio.get('/usuarios', queryParameters: {
+  'page': 1,
+  'limit': 10,
+  'sortBy': 'createdAt',
+  'order': 'desc',
+  'search': 'juan',
+  'activo': 'true',
+});
+
+// Respuesta paginada
+final data = response.data['data'] as List;
+final meta = response.data['meta'];
+print('Total: ${meta['total']}');
+print('Página: ${meta['page']} de ${meta['totalPages']}');
+```
+
+### Estructura de respuestas para Dio
+
+#### Respuesta exitosa
+```json
+{
+  "success": true,
+  "data": { ... },
+  "message": "Operación exitosa",
+  "statusCode": 200,
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
+#### Respuesta paginada
+```json
+{
+  "success": true,
+  "data": [...],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 50,
+    "totalPages": 5,
+    "hasNextPage": true,
+    "hasPrevPage": false
+  },
+  "message": "Se encontraron 10 usuarios",
+  "statusCode": 200,
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
+#### Respuesta de error
+```json
+{
+  "success": false,
+  "error": {
+    "message": "Descripción del error",
+    "statusCode": 400,
+    "code": "VALIDATION_ERROR",
+    "details": [...]
+  },
+  "timestamp": "2024-01-15T10:30:00.000Z"
+}
+```
+
+## 📄 Paginación y Filtros
+
+### Parámetros de query disponibles
+
+- `page` - Número de página (default: 1)
+- `limit` - Elementos por página (default: 10, máximo: 100)
+- `sortBy` - Campo de ordenamiento (id, email, nombre, apellido, createdAt, updatedAt)
+- `order` - Orden (asc, desc)
+- `search` - Búsqueda en nombre, apellido y email
+- `activo` - Filtrar por estado activo (true/false)
+
+### Ejemplo de uso
+
+```bash
+GET /api/usuarios?page=2&limit=20&sortBy=nombre&order=asc&search=juan&activo=true
+```
+
+## 📎 Upload de archivos
+
+### Configuración
+
+- **Tipos permitidos**: JPEG, JPG, PNG, WEBP, GIF
+- **Tamaño máximo**: 5MB por archivo
+- **Máximo archivos**: 5 por request
+- **Directorio**: `uploads/`
+
+### Ejemplo con Dio
+
+```dart
+final formData = FormData.fromMap({
+  'file': await MultipartFile.fromFile(
+    filePath,
+    filename: 'avatar.jpg',
+  ),
+});
+
+final response = await dio.post('/usuarios/upload', data: formData);
+```
+
+## ✅ Validaciones
+
+### Usuario (crear)
+- `email`: Email válido, único, 5-100 caracteres
+- `nombre`: 2-50 caracteres, solo letras y espacios
+- `apellido`: 2-50 caracteres, solo letras y espacios
+- `activo`: Boolean opcional
+
+### Códigos de error
+
+- `VALIDATION_ERROR` - Error de validación (400)
+- `EMAIL_ALREADY_EXISTS` - Email duplicado (409)
+- `USER_NOT_FOUND` - Usuario no encontrado (404)
+- `INVALID_ID` - ID inválido (400)
+- `UNIQUE_CONSTRAINT_VIOLATION` - Violación de unicidad (409)
+- `RECORD_NOT_FOUND` - Registro no encontrado (404)
+
+## 🌐 CORS para Flutter
+
+El backend está configurado para aceptar requests desde:
+
+- **Localhost**: `http://localhost:3000`, `http://localhost:8080`, `http://localhost:8081`
+- **Emulador Android**: `http://10.0.2.2:3000`, `http://10.0.2.2:8080`, `http://10.0.2.2:8081`
+- **127.0.0.1**: `http://127.0.0.1:3000`, etc.
+
+### Headers permitidos
+- `Content-Type`, `Accept`, `Authorization`
+- `X-API-Key`, `X-Request-ID`
+- `Cache-Control`, `Pragma`
+
+### Headers expuestos
+- `X-Total-Count`, `X-Page`, `X-Limit`, `X-Total-Pages`
 
 ## 📝 Ejemplos de Uso
 
@@ -123,19 +285,36 @@ curl -X POST http://localhost:3000/api/usuarios \
   }'
 ```
 
-### Crear un Producto
+### Obtener usuarios con paginación
 ```bash
-curl -X POST http://localhost:3000/api/productos \
-  -H "Content-Type: application/json" \
-  -d '{
-    "nombre": "Laptop",
-    "descripcion": "Laptop para desarrollo",
-    "precio": 1500.00,
-    "stock": 10
-  }'
+curl "http://localhost:3000/api/usuarios?page=1&limit=5&search=juan&activo=true"
+```
+
+### Buscar usuarios
+```bash
+curl "http://localhost:3000/api/usuarios/search?q=juan&page=1&limit=10"
+```
+
+### Obtener estadísticas
+```bash
+curl "http://localhost:3000/api/usuarios/stats"
 ```
 
 ## 🗄️ Base de Datos
+
+### Modelo de Usuario
+
+```typescript
+{
+  id: number
+  email: string (único)
+  nombre: string
+  apellido: string
+  activo: boolean
+  createdAt: Date
+  updatedAt: Date
+}
+```
 
 ### Cambiar de SQLite a otro motor
 
@@ -172,13 +351,24 @@ JWT_SECRET=your-secret-key-here
 JWT_EXPIRES_IN=7d
 ```
 
+## 📊 Logging
+
+El sistema usa Pino para logging estructurado:
+
+- **Desarrollo**: Logs detallados con colores
+- **Producción**: Logs optimizados
+- **Request/Response**: Body sanitizado en desarrollo
+- **IDs únicos**: Para tracing de requests
+- **Errores**: Stack traces en desarrollo
+
 ## 🛡️ Características de Seguridad
 
 - **Helmet** - Headers de seguridad HTTP
 - **CORS** - Control de acceso cross-origin
-- **Validación de datos** - Validación de entrada
+- **Validación de datos** - Validación robusta con express-validator
 - **Manejo de errores** - No exposición de información sensible
 - **Logging** - Registro de todas las operaciones
+- **Sanitización** - Campos sensibles ocultos en logs
 
 ## 📚 Tecnologías Utilizadas
 
@@ -188,6 +378,38 @@ JWT_EXPIRES_IN=7d
 - [SQLite](https://www.sqlite.org/) - Base de datos embebida
 - [Helmet](https://helmetjs.github.io/) - Seguridad HTTP
 - [CORS](https://github.com/expressjs/cors) - Cross-Origin Resource Sharing
+- [Multer](https://github.com/expressjs/multer) - Manejo de uploads
+- [Pino](https://github.com/pinojs/pino) - Logging rápido
+- [express-validator](https://github.com/express-validator/express-validator) - Validación
+
+## 🔨 Desarrollo
+
+### Agregar nuevos endpoints
+
+1. Definir el modelo en `prisma/schema.prisma`
+2. Ejecutar migración: `npm run prisma:migrate`
+3. Crear tipos en `src/models/`
+4. Crear validadores en `src/validators/`
+5. Crear controlador en `src/controllers/`
+6. Crear rutas en `src/routes/`
+7. Registrar rutas en `src/index.ts`
+
+### Agregar nuevos tipos de respuesta
+
+Usar los helpers en `src/models/ApiResponse.ts`:
+
+```typescript
+import { createSuccessResponse, createPaginatedResponse, createErrorResponse } from '../models/ApiResponse';
+
+// Respuesta simple
+const response = createSuccessResponse(data, 'Mensaje');
+
+// Respuesta paginada
+const response = createPaginatedResponse(data, meta, 'Mensaje');
+
+// Respuesta de error
+const response = createErrorResponse('Error', 400, 'ERROR_CODE');
+```
 
 ## 🤝 Contribuir
 
