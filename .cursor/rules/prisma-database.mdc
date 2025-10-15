@@ -1,69 +1,346 @@
 ---
-alwaysApply: true
+globs: packages/backend/prisma/**/*,packages/backend/src/config/database.ts
+description: Configuración y patrones de uso de Prisma ORM
 ---
-# Prisma y Base de Datos
 
-## Schema de Prisma
-El archivo [schema.prisma](mdc:packages/backend/prisma/schema.prisma) define la estructura de la base de datos.
+# Prisma Database
 
-## Workflow de cambios en la BD
+Esta aplicación usa **Prisma ORM** con **SQLite** para la persistencia de datos.
 
-1. **Modificar schema.prisma**: Agregar o modificar modelos
-2. **Crear migración**: `npm run prisma:migrate`
-   - Esto crea SQL y actualiza la BD
-3. **Generar cliente**: `npm run prisma:generate` (opcional, se hace automáticamente)
-4. **Actualizar tipos TypeScript**: Los tipos se generan automáticamente
+## Configuración
 
-## Convenciones de modelos
+### Schema
 
-### Nombres
-- Modelo en singular: `Usuario`, `Producto`
-- Tabla en plural: `@@map("usuarios")`, `@@map("productos")`
+El esquema se define en [prisma/schema.prisma](mdc:packages/backend/prisma/schema.prisma).
 
-### Campos estándar
-Incluir en todos los modelos:
 ```prisma
-id        Int      @id @default(autoincrement())
-activo    Boolean  @default(true)
-createdAt DateTime @default(now())
-updatedAt DateTime @updatedAt
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
 ```
 
-### Tipos de datos SQLite
-- `Int` - Enteros
-- `String` - Texto
-- `Float` - Números decimales
-- `Boolean` - Verdadero/falso
-- `DateTime` - Fecha y hora
+### Conexión
 
-### Modificadores
-- `@id` - Clave primaria
-- `@unique` - Valor único
-- `@default(value)` - Valor por defecto
-- `?` - Campo opcional (nullable)
+La conexión se gestiona en [src/config/database.ts](mdc:packages/backend/src/config/database.ts) con:
 
-## Comandos útiles
+- Singleton de PrismaClient
+- Manejo de conexión y desconexión
+- Logging en desarrollo
 
-- `npm run prisma:studio` - Interfaz gráfica para ver/editar datos
-- `npm run prisma:migrate` - Crear y aplicar migración
-- `npm run prisma:generate` - Regenerar cliente Prisma
-- `npm run prisma:reset` - Reset completo de la BD (¡cuidado!)
+## Modelos
 
-## Acceso a la BD en código
+### Convenciones de Modelos
+
+```prisma
+model NombreModelo {
+  id        Int      @id @default(autoincrement())
+  // ... campos
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("nombre_tabla")
+}
+```
+
+### Campos Estándar
+
+Todos los modelos deben incluir:
+- `id`: Primary key autoincrementable
+- `createdAt`: Fecha de creación automática
+- `updatedAt`: Fecha de actualización automática
+
+### Modelo Usuario (Ejemplo)
+
+```prisma
+model Usuario {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  nombre    String
+  apellido  String
+  activo    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("usuarios")
+}
+```
+
+## Migraciones
+
+### Flujo de Trabajo
+
+1. **Modificar el schema**: Editar `schema.prisma`
+2. **Crear migración**: `npm run prisma:migrate`
+3. **Aplicar migración**: Se aplica automáticamente
+4. **Commit**: Versionar tanto el schema como la migración
+
+### Comandos
+
+```bash
+# Crear y aplicar migración
+npm run prisma:migrate
+
+# Generar Prisma Client (automático con migrate)
+npm run prisma:generate
+
+# Abrir Prisma Studio (GUI)
+npm run prisma:studio
+
+# Reset completo de BD (cuidado!)
+npm run prisma:reset
+```
+
+### Naming de Migraciones
+
+Prisma genera nombres automáticamente:
+```
+20251015001930_init/
+20251015003255_remove_producto_table/
+```
+
+## Queries con Prisma
+
+### Queries Básicas
 
 ```typescript
-import { prisma } from '../config/database';
+// Obtener todos
+await prisma.usuario.findMany();
 
-// Operaciones CRUD
-await prisma.usuario.findMany()
-await prisma.usuario.findUnique({ where: { id } })
-await prisma.usuario.create({ data: { ... } })
-await prisma.usuario.update({ where: { id }, data: { ... } })
-await prisma.usuario.delete({ where: { id } })
+// Obtener por ID
+await prisma.usuario.findUnique({ where: { id: 1 } });
+
+// Crear
+await prisma.usuario.create({
+  data: { email, nombre, apellido }
+});
+
+// Actualizar
+await prisma.usuario.update({
+  where: { id: 1 },
+  data: { nombre: 'Nuevo nombre' }
+});
+
+// Eliminar
+await prisma.usuario.delete({ where: { id: 1 } });
 ```
 
-## Relaciones
-Cuando agregues relaciones entre modelos:
-- Usa `@relation` para definir relaciones
-- Define claves foráneas explícitamente
-- Considera índices para campos relacionados
+### Queries Avanzadas
+
+```typescript
+// Con filtros y paginación
+await prisma.usuario.findMany({
+  where: {
+    activo: true,
+    OR: [
+      { nombre: { contains: 'Juan' } },
+      { email: { contains: 'juan' } }
+    ]
+  },
+  skip: 0,
+  take: 10,
+  orderBy: { createdAt: 'desc' }
+});
+
+// Contar
+await prisma.usuario.count({
+  where: { activo: true }
+});
+```
+
+### Queries Paralelas
+
+Usar `Promise.all()` para queries independientes:
+
+```typescript
+const [usuarios, total] = await Promise.all([
+  prisma.usuario.findMany(options),
+  prisma.usuario.count({ where: options.where })
+]);
+```
+
+### Transacciones
+
+Para operaciones que deben ser atómicas:
+
+```typescript
+await prisma.$transaction([
+  prisma.usuario.create({ data: usuario1 }),
+  prisma.usuario.create({ data: usuario2 })
+]);
+
+// O con callback para lógica compleja
+await prisma.$transaction(async (tx) => {
+  const usuario = await tx.usuario.create({ data });
+  await tx.log.create({ data: { usuarioId: usuario.id } });
+});
+```
+
+## Tipos TypeScript
+
+Prisma genera tipos automáticamente:
+
+```typescript
+import { Usuario, Prisma } from '@prisma/client';
+
+// Tipo del modelo completo
+const usuario: Usuario = await prisma.usuario.findUnique(...);
+
+// Tipo para crear
+const data: Prisma.UsuarioCreateInput = {
+  email: 'test@test.com',
+  nombre: 'Test',
+  apellido: 'User'
+};
+
+// Tipo para actualizar
+const update: Prisma.UsuarioUpdateInput = {
+  nombre: 'Nuevo nombre'
+};
+```
+
+## Validaciones
+
+### En el Schema
+
+```prisma
+email String @unique  // Unique constraint
+activo Boolean @default(true)  // Default value
+```
+
+### En el Código
+
+Validar siempre antes de guardar:
+- Existencia de datos relacionados
+- Unicidad de campos únicos
+- Rangos y formatos válidos
+
+```typescript
+// Verificar existencia
+const existing = await prisma.usuario.findUnique({
+  where: { email }
+});
+if (existing) {
+  throw createError('Email ya existe', 409, 'EMAIL_EXISTS');
+}
+```
+
+## Paginación
+
+Usar las utilidades de [pagination.ts](mdc:packages/backend/src/utils/pagination.ts):
+
+```typescript
+const prismaOptions = createPrismaPaginationOptions(
+  { page: 1, limit: 10, sortBy: 'createdAt', order: 'desc' },
+  searchTerm,
+  filters
+);
+
+const items = await prisma.usuario.findMany(prismaOptions);
+```
+
+## Performance
+
+### Índices
+
+Agregar índices para campos frecuentemente consultados:
+
+```prisma
+model Usuario {
+  // ...
+  email String @unique  // Índice automático
+  
+  @@index([nombre, apellido])  // Índice compuesto
+}
+```
+
+### Select y Include
+
+Usar `select` para obtener solo campos necesarios:
+
+```typescript
+await prisma.usuario.findMany({
+  select: {
+    id: true,
+    nombre: true,
+    email: true
+  }
+});
+```
+
+### Conexiones
+
+El PrismaClient maneja el connection pooling automáticamente.
+
+## Logging
+
+En desarrollo, Prisma logea todas las queries:
+
+```typescript
+// Configurado en database.ts
+log: config.nodeEnv === 'development' 
+  ? ['query', 'error', 'warn'] 
+  : ['error']
+```
+
+## Backup y Restore
+
+### SQLite
+
+```bash
+# Backup
+cp prisma/dev.db prisma/backup.db
+
+# Restore
+cp prisma/backup.db prisma/dev.db
+```
+
+## Limitaciones de SQLite
+
+- No soporta algunas features avanzadas de SQL
+- Toda la BD en un archivo
+- No recomendado para producción de alta concurrencia
+- Considerar PostgreSQL o MySQL para producción
+
+## Prisma Studio
+
+GUI para explorar y editar datos:
+
+```bash
+npm run prisma:studio
+```
+
+Abre en `http://localhost:5555`
+
+## Seeds (Futuro)
+
+Crear archivo `prisma/seed.ts` para datos iniciales:
+
+```typescript
+import { PrismaClient } from '@prisma/client';
+const prisma = new PrismaClient();
+
+async function main() {
+  await prisma.usuario.createMany({
+    data: [
+      { email: 'user1@test.com', nombre: 'User', apellido: 'One' },
+      { email: 'user2@test.com', nombre: 'User', apellido: 'Two' }
+    ]
+  });
+}
+
+main()
+  .catch(console.error)
+  .finally(() => prisma.$disconnect());
+```
+
+Configurar en `package.json`:
+```json
+"prisma": {
+  "seed": "ts-node prisma/seed.ts"
+}
+```

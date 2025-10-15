@@ -1,97 +1,244 @@
 ---
-alwaysApply: true
+description: Patrones y estructura de la API REST
 ---
-# Patrones de API REST
 
-## Endpoints disponibles
+# Patrones de API
 
-### Usuarios (`/api/usuarios`)
-- `GET /api/usuarios` - Obtener todos los usuarios
-- `GET /api/usuarios/:id` - Obtener un usuario por ID
-- `POST /api/usuarios` - Crear un nuevo usuario
-- `PUT /api/usuarios/:id` - Actualizar un usuario
-- `DELETE /api/usuarios/:id` - Eliminar un usuario
+Esta API REST sigue un diseño **BFF (Backend For Frontend)** optimizado para Flutter con Dio.
 
-### Productos (`/api/productos`)
-- `GET /api/productos` - Obtener todos los productos
-- `GET /api/productos/:id` - Obtener un producto por ID
-- `POST /api/productos` - Crear un nuevo producto
-- `PUT /api/productos/:id` - Actualizar un producto
-- `DELETE /api/productos/:id` - Eliminar un producto
+## Formato de Respuestas
 
-## Estructura de respuestas
+Todas las respuestas de la API siguen el formato definido en [ApiResponse.ts](mdc:packages/backend/src/models/ApiResponse.ts).
 
-### Respuesta exitosa (200, 201)
+### Respuesta Exitosa
+
 ```json
 {
   "success": true,
-  "data": { ... },
-  "message": "Operación exitosa" // opcional
+  "data": { /* datos */ },
+  "message": "Mensaje descriptivo",
+  "statusCode": 200,
+  "timestamp": "2024-01-01T00:00:00.000Z"
 }
 ```
 
-### Respuesta de lista
+### Respuesta Paginada
+
 ```json
 {
   "success": true,
-  "data": [...],
-  "count": 10
+  "data": [ /* array de items */ ],
+  "meta": {
+    "page": 1,
+    "limit": 10,
+    "total": 100,
+    "totalPages": 10,
+    "hasNextPage": true,
+    "hasPrevPage": false
+  },
+  "message": "Mensaje descriptivo",
+  "statusCode": 200,
+  "timestamp": "2024-01-01T00:00:00.000Z"
 }
 ```
 
-### Respuesta de error (4xx, 5xx)
+### Respuesta de Error
+
 ```json
 {
   "success": false,
   "error": {
-    "message": "Descripción del error",
-    "statusCode": 400
-  }
+    "message": "Mensaje de error",
+    "statusCode": 400,
+    "code": "ERROR_CODE",
+    "details": { /* detalles opcionales */ }
+  },
+  "timestamp": "2024-01-01T00:00:00.000Z"
 }
 ```
 
-## Modelos de datos
+## Endpoints RESTful
 
-### Usuario
-```typescript
+### Convenciones de Rutas
+
+Seguir el patrón REST estándar:
+
+- `GET /api/recursos` - Listar todos (con paginación)
+- `GET /api/recursos/:id` - Obtener uno por ID
+- `POST /api/recursos` - Crear nuevo
+- `PUT /api/recursos/:id` - Actualizar completo
+- `PATCH /api/recursos/:id` - Actualizar parcial
+- `DELETE /api/recursos/:id` - Eliminar
+
+### Rutas Adicionales
+
+- `GET /api/recursos/search?q=termino` - Búsqueda
+- `GET /api/recursos/stats` - Estadísticas
+- `PATCH /api/recursos/:id/toggle-activo` - Toggle de estado
+
+## Parámetros de Query
+
+### Paginación
+
+Parámetros estándar para listas (ver [pagination.ts](mdc:packages/backend/src/utils/pagination.ts)):
+
+- `page`: Número de página (default: 1)
+- `limit`: Items por página (default: 10, max: 100)
+- `sortBy`: Campo para ordenar (default: createdAt)
+- `order`: Orden (asc/desc, default: desc)
+
+Ejemplo: `GET /api/usuarios?page=2&limit=20&sortBy=nombre&order=asc`
+
+### Filtros
+
+Filtros específicos del recurso:
+
+- `search`: Búsqueda en múltiples campos
+- `activo`: Filtrar por estado activo (true/false)
+- Otros filtros específicos del modelo
+
+Ejemplo: `GET /api/usuarios?search=juan&activo=true`
+
+## Headers
+
+### Headers de Request
+
+- `Content-Type: application/json` - Siempre para POST/PUT/PATCH
+- `X-Request-ID` - ID único de request (opcional)
+- `Authorization` - Token de autenticación (futuro)
+
+### Headers de Response
+
+Headers automáticos configurados en [index.ts](mdc:packages/backend/src/index.ts):
+
+- `X-API-Version: 1.0.0` - Versión de la API
+- `X-Request-ID` - ID del request
+- `X-Total-Count` - Total de items (en listas)
+- `X-Page` - Página actual
+- `X-Limit` - Items por página
+- `X-Total-Pages` - Total de páginas
+
+## Códigos de Estado HTTP
+
+### Exitosos (2xx)
+
+- **200 OK**: Request exitoso con datos
+- **201 Created**: Recurso creado exitosamente
+- **204 No Content**: Request exitoso sin datos (DELETE)
+
+### Errores del Cliente (4xx)
+
+- **400 Bad Request**: Datos inválidos o malformados
+- **401 Unauthorized**: Autenticación requerida
+- **403 Forbidden**: Sin permisos
+- **404 Not Found**: Recurso no encontrado
+- **409 Conflict**: Conflicto (ej: email duplicado)
+- **422 Unprocessable Entity**: Errores de validación
+
+### Errores del Servidor (5xx)
+
+- **500 Internal Server Error**: Error interno del servidor
+- **503 Service Unavailable**: Servicio no disponible
+
+## CORS
+
+Configurado para Flutter en [index.ts](mdc:packages/backend/src/index.ts):
+
+### Orígenes Permitidos
+
+- `http://localhost:3000`, `8080`, `8081` - Desarrollo web
+- `http://10.0.2.2:3000`, `8080`, `8081` - Emulador Android
+- `http://127.0.0.1:3000`, `8080`, `8081` - Localhost alternativo
+- `*` - Todos (solo en desarrollo)
+
+### Métodos Permitidos
+
+- GET, POST, PUT, PATCH, DELETE, OPTIONS
+
+## Validación
+
+### En el Backend
+
+Usar express-validator en [validators/](mdc:packages/backend/src/validators/):
+
+- Validar tipos de datos
+- Validar formatos (email, URL, etc.)
+- Validar rangos y longitudes
+- Sanitizar inputs
+
+### Respuesta de Error de Validación
+
+```json
 {
-  id: number
-  email: string (único)
-  nombre: string
-  apellido: string
-  activo: boolean
-  createdAt: Date
-  updatedAt: Date
+  "success": false,
+  "error": {
+    "message": "Errores de validación",
+    "statusCode": 422,
+    "code": "VALIDATION_ERROR",
+    "details": [
+      {
+        "field": "email",
+        "message": "Email inválido"
+      }
+    ]
+  },
+  "timestamp": "2024-01-01T00:00:00.000Z"
 }
 ```
 
-### Producto
-```typescript
+## Upload de Archivos
+
+### Endpoint de Upload
+
+```
+POST /api/recursos/:id/upload
+Content-Type: multipart/form-data
+```
+
+### Configuración
+
+Ver [multer.ts](mdc:packages/backend/src/config/multer.ts) y [upload.ts](mdc:packages/backend/src/middlewares/upload.ts):
+
+- Tamaño máximo: Configurado por tipo
+- Tipos permitidos: Configurables por endpoint
+- Almacenamiento: `/uploads` con nombres únicos
+- Validación: Tipo MIME y extensión
+
+### Respuesta de Upload
+
+```json
 {
-  id: number
-  nombre: string
-  descripcion: string | null
-  precio: number
-  stock: number
-  activo: boolean
-  createdAt: Date
-  updatedAt: Date
+  "success": true,
+  "data": {
+    "filename": "1234567890-file.jpg",
+    "originalname": "file.jpg",
+    "mimetype": "image/jpeg",
+    "size": 12345,
+    "url": "http://localhost:3000/uploads/1234567890-file.jpg"
+  },
+  "message": "Archivo subido exitosamente",
+  "statusCode": 201,
+  "timestamp": "2024-01-01T00:00:00.000Z"
 }
 ```
 
-## Flujo para crear nuevos endpoints
+## Rate Limiting
 
-1. **Definir el modelo en Prisma** ([schema.prisma](mdc:packages/backend/prisma/schema.prisma))
-2. **Ejecutar migración**: `npm run prisma:migrate`
-3. **Crear tipos/DTOs** en `src/models/`
-4. **Crear controlador** en `src/controllers/` siguiendo el patrón de [usuarioController.ts](mdc:packages/backend/src/controllers/usuarioController.ts)
-5. **Crear rutas** en `src/routes/`
-6. **Registrar rutas** en [index.ts](mdc:packages/backend/src/index.ts)
+(Por implementar en el futuro)
+- Limitar requests por IP
+- Configurar según tipo de endpoint
+- Headers de rate limit en respuesta
 
-## Middlewares aplicados
+## Versionado
 
-- **helmet**: Seguridad HTTP headers
-- **cors**: Control de acceso CORS
-- **express.json()**: Parsing de JSON (límite 10mb)
-- **logger**: Logging de peticiones (ver [logger.ts](mdc:packages/backend/src/middlewares/logger.ts))
-- **errorHandler**: Manejo centralizado de errores (ver [errorHandler.ts](mdc:packages/backend/src/middlewares/errorHandler.ts))
+Actualmente: v1.0.0 (sin versionado en URLs)
+
+En el futuro, considerar:
+- `/api/v1/recursos`
+- `/api/v2/recursos`
+
+## Documentación
+
+- Health check: `GET /health`
+- Info de la API: `GET /`
+- Documentación completa: Ver [README.md](mdc:packages/backend/README.md)

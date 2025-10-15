@@ -1,240 +1,505 @@
 ---
-alwaysApply: true
+globs: packages/frontend/**/*.dart
+description: Convenciones de código para el frontend Flutter
 ---
-# Convenciones del Frontend (Flutter)
 
-## Arquitectura MVVM
+# Convenciones de Frontend Flutter
 
-Este proyecto usa el patrón **MVVM (Model-View-ViewModel)** con Provider para gestión de estado.
+Este documento define las convenciones y mejores prácticas para el desarrollo del frontend Flutter.
 
-## Estructura de archivos
+## Arquitectura
 
-El punto de entrada es [main.dart](mdc:packages/frontend/lib/main.dart)
+El frontend sigue una arquitectura limpia con separación de responsabilidades:
+
+- **[lib/main.dart](mdc:packages/frontend/lib/main.dart)**: Punto de entrada de la aplicación
+- **[lib/models/](mdc:packages/frontend/lib/models/)**: Modelos de datos (clases Dart)
+- **[lib/providers/](mdc:packages/frontend/lib/providers/)**: Gestión de estado (Provider, Bloc, Riverpod, etc.)
+- **[lib/screens/](mdc:packages/frontend/lib/screens/)**: Pantallas completas de la aplicación
+- **[lib/services/](mdc:packages/frontend/lib/services/)**: Servicios (API, local storage, etc.)
+- **[lib/widgets/](mdc:packages/frontend/lib/widgets/)**: Widgets reutilizables
+- **[lib/utils/](mdc:packages/frontend/lib/utils/)**: Utilidades y constantes
+
+## Estilo de Código
+
+### Dart
+
+- Seguir las [Dart style guidelines](https://dart.dev/guides/language/effective-dart/style)
+- Usar `dart format` para formatear código automáticamente
+- Pasar `flutter analyze` sin errores
+
+### Naming Conventions
+
+- **Archivos**: snake_case (e.g., `usuario_screen.dart`)
+- **Clases**: PascalCase (e.g., `UsuarioScreen`, `UsuarioModel`)
+- **Funciones y Variables**: camelCase (e.g., `getUsuarios`, `userName`)
+- **Constantes**: lowerCamelCase o UPPER_SNAKE_CASE según contexto
+
+## Estructura de Archivos
+
+### Organización por Feature
+
+Cuando la app crezca, considerar organizar por features:
 
 ```
 lib/
-├── main.dart                    # Punto de entrada
-├── models/                      # Modelos de datos (Model)
-│   ├── usuario.dart
-│   └── producto.dart
-├── services/                    # Servicios de datos
-│   ├── api_service.dart        # Cliente HTTP base
-│   ├── usuario_service.dart    # Servicio de usuarios
-│   └── producto_service.dart   # Servicio de productos
-├── providers/                   # ViewModels (lógica de negocio)
-│   ├── usuario_provider.dart
-│   └── producto_provider.dart
-├── screens/                     # Views (pantallas)
-│   ├── home/
-│   │   └── home_screen.dart
+├── features/
 │   ├── usuarios/
-│   │   ├── usuarios_screen.dart
-│   │   └── usuario_detalle_screen.dart
+│   │   ├── models/
+│   │   ├── providers/
+│   │   ├── screens/
+│   │   ├── services/
+│   │   └── widgets/
 │   └── productos/
-│       ├── productos_screen.dart
-│       └── producto_detalle_screen.dart
-└── widgets/                     # Widgets reutilizables
-    ├── loading_widget.dart
-    ├── error_widget.dart
-    └── custom_card.dart
+│       └── ...
+├── shared/
+│   ├── widgets/
+│   ├── utils/
+│   └── services/
+└── main.dart
 ```
 
-## Responsabilidades de cada capa
+## Modelos
 
-### Models (`models/`)
-- **Qué son**: Clases que representan los datos
-- **Responsabilidad**: Estructura de datos, serialización JSON
-- **Ejemplo**:
+### Clases de Datos
+
+Usar clases inmutables con factory constructors para JSON:
+
 ```dart
 class Usuario {
   final int id;
   final String email;
   final String nombre;
-  
-  Usuario({required this.id, required this.email, required this.nombre});
-  
+  final String apellido;
+  final bool activo;
+  final DateTime createdAt;
+  final DateTime updatedAt;
+
+  const Usuario({
+    required this.id,
+    required this.email,
+    required this.nombre,
+    required this.apellido,
+    required this.activo,
+    required this.createdAt,
+    required this.updatedAt,
+  });
+
   factory Usuario.fromJson(Map<String, dynamic> json) {
     return Usuario(
       id: json['id'],
       email: json['email'],
       nombre: json['nombre'],
+      apellido: json['apellido'],
+      activo: json['activo'],
+      createdAt: DateTime.parse(json['createdAt']),
+      updatedAt: DateTime.parse(json['updatedAt']),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'email': email,
+      'nombre': nombre,
+      'apellido': apellido,
+      'activo': activo,
+      'createdAt': createdAt.toIso8601String(),
+      'updatedAt': updatedAt.toIso8601String(),
+    };
+  }
+}
+```
+
+### Usar Paquetes para Serialización
+
+Considerar usar:
+- `json_serializable`: Generación automática de código
+- `freezed`: Clases inmutables con copyWith, equality, etc.
+
+## Servicios API
+
+### Estructura de Servicio
+
+Crear servicios específicos para cada recurso:
+
+```dart
+class UsuarioService {
+  final Dio _dio;
+
+  UsuarioService(this._dio);
+
+  Future<ApiResponse<List<Usuario>>> getUsuarios({
+    int page = 1,
+    int limit = 10,
+    String? search,
+    bool? activo,
+  }) async {
+    try {
+      final response = await _dio.get(
+        '/api/usuarios',
+        queryParameters: {
+          'page': page,
+          'limit': limit,
+          if (search != null) 'search': search,
+          if (activo != null) 'activo': activo,
+        },
+      );
+
+      final apiResponse = ApiResponse<List<Usuario>>.fromJson(
+        response.data,
+        (json) => (json as List)
+            .map((item) => Usuario.fromJson(item))
+            .toList(),
+      );
+
+      return apiResponse;
+    } catch (e) {
+      throw _handleError(e);
+    }
+  }
+
+  // ... más métodos
+}
+```
+
+### Manejo de Respuestas API
+
+Crear clase genérica `ApiResponse` que coincida con el backend:
+
+```dart
+class ApiResponse<T> {
+  final bool success;
+  final T? data;
+  final String? message;
+  final int statusCode;
+  final DateTime timestamp;
+  final PaginationMeta? meta;
+  final ApiError? error;
+
+  const ApiResponse({
+    required this.success,
+    this.data,
+    this.message,
+    required this.statusCode,
+    required this.timestamp,
+    this.meta,
+    this.error,
+  });
+
+  factory ApiResponse.fromJson(
+    Map<String, dynamic> json,
+    T Function(dynamic)? fromJsonT,
+  ) {
+    return ApiResponse(
+      success: json['success'],
+      data: json['data'] != null && fromJsonT != null
+          ? fromJsonT(json['data'])
+          : json['data'],
+      message: json['message'],
+      statusCode: json['statusCode'],
+      timestamp: DateTime.parse(json['timestamp']),
+      meta: json['meta'] != null 
+          ? PaginationMeta.fromJson(json['meta']) 
+          : null,
+      error: json['error'] != null 
+          ? ApiError.fromJson(json['error']) 
+          : null,
     );
   }
 }
 ```
 
-### Services (`services/`)
-- **Qué son**: Clases que manejan comunicación con APIs y fuentes de datos
-- **Responsabilidad**: Peticiones HTTP, manejo de endpoints, errores de red
-- **No contienen**: Lógica de negocio o estado de la UI
-- **Ejemplo**:
+### HTTP Client (Dio)
+
+Usar **Dio** para requests HTTP:
+
 ```dart
-class UsuarioService {
-  final ApiService _apiService;
+final dio = Dio(BaseOptions(
+  baseUrl: 'http://10.0.2.2:3000',  // Emulador Android
+  connectTimeout: const Duration(seconds: 5),
+  receiveTimeout: const Duration(seconds: 3),
+  headers: {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  },
+));
+
+// Agregar interceptores
+dio.interceptors.add(LogInterceptor(
+  requestBody: true,
+  responseBody: true,
+));
+```
+
+### Constantes de API
+
+Definir en [lib/utils/constants.dart](mdc:packages/frontend/lib/utils/constants.dart):
+
+```dart
+class ApiConstants {
+  // Base URLs
+  static const String baseUrlAndroidEmulator = 'http://10.0.2.2:3000';
+  static const String baseUrlIosSimulator = 'http://localhost:3000';
+  static const String baseUrlProduction = 'https://api.example.com';
+
+  // Endpoints
+  static const String usuarios = '/api/usuarios';
   
-  Future<List<Usuario>> obtenerUsuarios() async {
-    final response = await _apiService.get('/usuarios');
-    // Retorna datos, no maneja estado
-    return (response['data'] as List)
-        .map((json) => Usuario.fromJson(json))
-        .toList();
-  }
+  // Timeouts
+  static const Duration connectTimeout = Duration(seconds: 5);
+  static const Duration receiveTimeout = Duration(seconds: 3);
 }
 ```
 
-### Providers (`providers/`)
-- **Qué son**: ViewModels que contienen la lógica de negocio y estado
-- **Responsabilidad**: Estado de la UI, lógica de negocio, orquestación de servicios
-- **Extienden**: `ChangeNotifier` de Provider
-- **Notifican**: Cambios a la UI con `notifyListeners()`
-- **Ejemplo**:
+## Gestión de Estado
+
+### Opciones
+
+Elegir según complejidad:
+- **setState**: Para estado local simple
+- **Provider**: Para estado compartido moderado
+- **Riverpod**: Provider mejorado
+- **Bloc**: Para apps complejas con lógica de negocio
+
+### Ejemplo con Provider
+
 ```dart
-class UsuarioProvider extends ChangeNotifier {
-  final UsuarioService _usuarioService;
-  
+class UsuariosProvider extends ChangeNotifier {
   List<Usuario> _usuarios = [];
-  bool _isLoading = false;
+  bool _loading = false;
   String? _error;
-  
+
   List<Usuario> get usuarios => _usuarios;
-  bool get isLoading => _isLoading;
+  bool get loading => _loading;
   String? get error => _error;
-  
-  Future<void> cargarUsuarios() async {
-    _isLoading = true;
+
+  Future<void> loadUsuarios() async {
+    _loading = true;
     _error = null;
     notifyListeners();
-    
+
     try {
-      _usuarios = await _usuarioService.obtenerUsuarios();
+      final response = await _usuarioService.getUsuarios();
+      _usuarios = response.data ?? [];
     } catch (e) {
       _error = e.toString();
     } finally {
-      _isLoading = false;
+      _loading = false;
       notifyListeners();
     }
   }
 }
 ```
 
-### Screens (`screens/`)
-- **Qué son**: Las vistas/pantallas de la aplicación (View en MVVM)
-- **Responsabilidad**: Construcción de la UI, responder a interacciones del usuario
-- **No contienen**: Lógica de negocio (va en providers)
-- **Usan**: `Consumer` o `Provider.of` para acceder a los providers
-- **Ejemplo**:
+## Widgets
+
+### StatelessWidget vs StatefulWidget
+
+- Usar **StatelessWidget** siempre que sea posible
+- **StatefulWidget** solo cuando necesites estado local mutable
+
+### Composición
+
+Dividir widgets grandes en widgets pequeños y reutilizables:
+
 ```dart
-class UsuariosScreen extends StatelessWidget {
+class UsuarioCard extends StatelessWidget {
+  final Usuario usuario;
+  final VoidCallback? onTap;
+
+  const UsuarioCard({
+    Key? key,
+    required this.usuario,
+    this.onTap,
+  }) : super(key: key);
+
   @override
   Widget build(BuildContext context) {
-    return Consumer<UsuarioProvider>(
-      builder: (context, provider, child) {
-        if (provider.isLoading) {
-          return LoadingWidget();
-        }
-        
-        if (provider.error != null) {
-          return ErrorWidget(message: provider.error!);
-        }
-        
-        return ListView.builder(
-          itemCount: provider.usuarios.length,
-          itemBuilder: (context, index) {
-            final usuario = provider.usuarios[index];
-            return ListTile(title: Text(usuario.nombre));
-          },
-        );
-      },
+    return Card(
+      child: ListTile(
+        title: Text('${usuario.nombre} ${usuario.apellido}'),
+        subtitle: Text(usuario.email),
+        trailing: Icon(
+          usuario.activo ? Icons.check_circle : Icons.cancel,
+          color: usuario.activo ? Colors.green : Colors.red,
+        ),
+        onTap: onTap,
+      ),
     );
   }
 }
 ```
 
-### Widgets (`widgets/`)
-- **Qué son**: Componentes de UI reutilizables
-- **Responsabilidad**: UI pequeña y reutilizable sin lógica de negocio
-- **Preferir**: StatelessWidget cuando sea posible
-- **Usar**: `const` constructors para optimización
+### Keys
 
-## Nomenclatura
+Usar keys cuando sea necesario para mantener el estado:
+- `ValueKey`: Para widgets con datos únicos
+- `GlobalKey`: Para acceder al estado desde fuera (usar con moderación)
 
-- **Clases**: PascalCase (ej: `UsuarioProvider`, `HomeScreen`)
-- **Archivos**: snake_case (ej: `usuario_provider.dart`, `home_screen.dart`)
-- **Variables y funciones**: camelCase (ej: `cargarUsuarios`, `isLoading`)
-- **Constantes**: camelCase con const (ej: `const apiBaseUrl`)
-- **Privados**: Prefijo `_` (ej: `_usuarios`, `_apiService`)
+## Navegación
 
-## Flujo de datos MVVM
+### Navigator 2.0 / go_router
 
-```
-Screen (View) → Provider (ViewModel) → Service → Backend API
-                    ↓
-                notifyListeners()
-                    ↓
-             Screen actualiza UI
-```
-
-1. **Screen** llama método del **Provider**
-2. **Provider** usa **Service** para obtener datos
-3. **Service** hace petición al **Backend**
-4. **Service** retorna datos al **Provider**
-5. **Provider** actualiza estado y llama `notifyListeners()`
-6. **Screen** se reconstruye automáticamente con nuevos datos
-
-## Configuración en main.dart
+Para apps complejas, considerar usar `go_router`:
 
 ```dart
-void main() {
-  runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider(create: (_) => UsuarioProvider(UsuarioService())),
-        ChangeNotifierProvider(create: (_) => ProductoProvider(ProductoService())),
-      ],
-      child: const MyApp(),
+final router = GoRouter(
+  routes: [
+    GoRoute(
+      path: '/',
+      builder: (context, state) => HomeScreen(),
     ),
+    GoRoute(
+      path: '/usuarios',
+      builder: (context, state) => UsuariosScreen(),
+    ),
+    GoRoute(
+      path: '/usuarios/:id',
+      builder: (context, state) {
+        final id = state.params['id']!;
+        return UsuarioDetailScreen(id: int.parse(id));
+      },
+    ),
+  ],
+);
+```
+
+### Navigator Básico
+
+Para navegación simple:
+
+```dart
+// Navegar
+Navigator.push(
+  context,
+  MaterialPageRoute(builder: (context) => UsuarioScreen()),
+);
+
+// Volver
+Navigator.pop(context);
+
+// Reemplazar
+Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(builder: (context) => HomeScreen()),
+);
+```
+
+## UI/UX
+
+### Material Design
+
+Usar componentes de Material Design 3:
+- `MaterialApp` con `ThemeData` personalizado
+- `Scaffold` para estructura de pantallas
+- `AppBar`, `BottomNavigationBar`, etc.
+
+### Tema
+
+Definir tema consistente:
+
+```dart
+ThemeData(
+  useMaterial3: true,
+  colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+  appBarTheme: const AppBarTheme(
+    centerTitle: true,
+    elevation: 2,
+  ),
+  cardTheme: const CardTheme(
+    elevation: 2,
+    margin: EdgeInsets.all(8),
+  ),
+)
+```
+
+### Responsive
+
+Usar `MediaQuery` y `LayoutBuilder` para diseños responsive:
+
+```dart
+final size = MediaQuery.of(context).size;
+final isTablet = size.width > 600;
+```
+
+## Manejo de Errores
+
+### Try-Catch
+
+Siempre manejar errores en operaciones asíncronas:
+
+```dart
+try {
+  final usuarios = await usuarioService.getUsuarios();
+  // ...
+} on DioException catch (e) {
+  // Error HTTP específico
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Error: ${e.message}')),
+  );
+} catch (e) {
+  // Error genérico
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text('Error inesperado')),
   );
 }
 ```
 
-## Buenas prácticas
+### Loading States
 
-### General
-- Comentar código complejo en español
-- Usar nombres descriptivos y semánticos
-- Mantener archivos pequeños y enfocados (< 300 líneas)
+Mostrar indicadores de carga:
 
-### Material Design
-- Usar Material 3 (`useMaterial3: true`)
-- Usar ThemeData para temas consistentes
-- Aprovechar widgets de Material Design
+```dart
+if (loading) {
+  return const Center(child: CircularProgressIndicator());
+}
 
-### Widgets
-- Usar `const` constructors siempre que sea posible
-- Preferir StatelessWidget sobre StatefulWidget
-- Extraer widgets complejos a archivos separados
-- Evitar widgets muy anidados (extraer a métodos o widgets)
+if (error != null) {
+  return Center(child: Text('Error: $error'));
+}
 
-### Providers
-- Un provider por funcionalidad/entidad
-- Mantener providers enfocados en una responsabilidad
-- Usar `_isLoading` y `_error` para estados comunes
-- Llamar `notifyListeners()` después de cambios de estado
+return ListView.builder(...);
+```
 
-### Services
-- Un service por API/recurso
-- Servicios no tienen estado (stateless)
-- Servicios solo retornan datos, no manejan estado de UI
-- Manejar errores y lanzar excepciones apropiadas
+## Testing
 
-### Comunicación con Backend
-- Endpoint base: `http://localhost:3000/api`
-- Usar paquete `http` o `dio` para peticiones HTTP
-- Crear un `ApiService` base para configuración común
-- Manejar errores de red apropiadamente
-- Usar async/await para operaciones asíncronas
+### Unit Tests
 
-### Testing
-- Models deben ser fáciles de testear (sin dependencias)
-- Services pueden mockearse para testing de Providers
-- Providers contienen la lógica a testear
+```dart
+test('Usuario.fromJson crea instancia correcta', () {
+  final json = {
+    'id': 1,
+    'email': 'test@test.com',
+    // ...
+  };
+  
+  final usuario = Usuario.fromJson(json);
+  
+  expect(usuario.id, 1);
+  expect(usuario.email, 'test@test.com');
+});
+```
+
+### Widget Tests
+
+```dart
+testWidgets('UsuarioCard muestra información', (tester) async {
+  final usuario = Usuario(...);
+  
+  await tester.pumpWidget(
+    MaterialApp(home: UsuarioCard(usuario: usuario)),
+  );
+  
+  expect(find.text(usuario.nombre), findsOneWidget);
+});
+```
+
+## Buenas Prácticas
+
+1. **Inmutabilidad**: Preferir objetos inmutables
+2. **Null Safety**: Aprovechar null safety de Dart
+3. **const Constructors**: Usar `const` cuando sea posible
+4. **Async/Await**: Preferir sobre Futures con then
+5. **Named Parameters**: Usar para mayor claridad
+6. **Documentation**: Documentar APIs públicas
+7. **Performance**: Usar `const` widgets, evitar rebuilds innecesarios

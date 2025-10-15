@@ -1,47 +1,99 @@
 ---
 alwaysApply: true
 ---
+
 # Estructura del Proyecto
 
-Este es un monorepo con dos paquetes principales:
+Este es un monorepo que contiene una aplicación completa con Backend (Express + TypeScript) y Frontend (Flutter).
 
-## Backend (`packages/backend`)
-- **Framework**: Express.js con TypeScript
-- **Base de datos**: SQLite con Prisma ORM
-- **Punto de entrada**: [packages/backend/src/index.ts](mdc:packages/backend/src/index.ts)
-- **Configuración**: 
-  - Variables de entorno: [packages/backend/src/config/env.ts](mdc:packages/backend/src/config/env.ts)
-  - Base de datos: [packages/backend/src/config/database.ts](mdc:packages/backend/src/config/database.ts)
-  - Schema Prisma: [packages/backend/prisma/schema.prisma](mdc:packages/backend/prisma/schema.prisma)
+## Organización General
 
-### Estructura del Backend
 ```
-src/
-├── config/          # Configuración de la aplicación
-├── controllers/     # Controladores de rutas
-├── models/          # Tipos y DTOs de TypeScript
-├── routes/          # Definición de rutas Express
-└── middlewares/     # Middlewares personalizados
+app_cuatri/
+├── packages/
+│   ├── backend/          # API REST con Express y TypeScript
+│   └── frontend/         # Aplicación móvil con Flutter
 ```
 
-## Frontend (`packages/frontend`)
-- **Framework**: Flutter (Dart)
-- **Punto de entrada**: [packages/frontend/lib/main.dart](mdc:packages/frontend/lib/main.dart)
-- **Configuración**: [packages/frontend/pubspec.yaml](mdc:packages/frontend/pubspec.yaml)
+## Backend (packages/backend)
 
-## Comandos útiles
+El backend está organizado siguiendo una arquitectura en capas:
+
+- **[src/index.ts](mdc:packages/backend/src/index.ts)**: Punto de entrada principal del servidor Express
+- **[src/config/](mdc:packages/backend/src/config/)**: Configuraciones (database, env, multer)
+- **[src/controllers/](mdc:packages/backend/src/controllers/)**: Lógica de controladores
+- **[src/middlewares/](mdc:packages/backend/src/middlewares/)**: Middlewares (errorHandler, logger, validator, upload)
+- **[src/models/](mdc:packages/backend/src/models/)**: Modelos y tipos TypeScript
+- **[src/routes/](mdc:packages/backend/src/routes/)**: Definición de rutas
+- **[src/validators/](mdc:packages/backend/src/validators/)**: Validadores con express-validator
+- **[src/utils/](mdc:packages/backend/src/utils/)**: Utilidades (pagination, etc.)
+- **[prisma/schema.prisma](mdc:packages/backend/prisma/schema.prisma)**: Esquema de base de datos Prisma
+- **uploads/**: Carpeta para archivos subidos (no versionada)
+
+### Stack Técnico Backend
+
+- Express.js + TypeScript
+- Prisma ORM con SQLite
+- express-validator para validaciones
+- Multer para upload de archivos
+- Pino para logging
+- Helmet + CORS para seguridad
+
+## Frontend (packages/frontend)
+
+Aplicación Flutter con la siguiente estructura:
+
+- **[lib/main.dart](mdc:packages/frontend/lib/main.dart)**: Punto de entrada de la app
+- **[lib/models/](mdc:packages/frontend/lib/models/)**: Modelos de datos
+- **[lib/providers/](mdc:packages/frontend/lib/providers/)**: Gestión de estado
+- **[lib/screens/](mdc:packages/frontend/lib/screens/)**: Pantallas de la app
+- **[lib/services/](mdc:packages/frontend/lib/services/)**: Servicios (API, etc.)
+- **[lib/widgets/](mdc:packages/frontend/lib/widgets/)**: Widgets reutilizables
+- **[lib/utils/constants.dart](mdc:packages/frontend/lib/utils/constants.dart)**: Constantes globales
+
+### Stack Técnico Frontend
+
+- Flutter SDK ^3.9.2
+- Dart
+- Material Design
+
+## Flujo de Trabajo
+
+1. El backend expone una API REST en `/api/*`
+2. El frontend Flutter consume la API usando HTTP/Dio
+3. La base de datos SQLite se gestiona con Prisma
+4. Los archivos subidos se sirven estáticamente desde `/uploads`
+
+## Comandos Importantes
 
 ### Backend
-- `npm run dev` - Modo desarrollo con hot reload
-- `npm run build` - Compilar TypeScript
-- `npm run prisma:migrate` - Ejecutar migraciones
-- `npm run prisma:studio` - Interfaz gráfica de la BD
+```bash
+cd packages/backend
+npm run dev              # Desarrollo con hot-reload
+npm run build            # Compilar TypeScript
+npm run prisma:migrate   # Ejecutar migraciones
+npm run prisma:studio    # Abrir Prisma Studio
+```
 
 ### Frontend
-- `flutter run` - Ejecutar la aplicación
-- `flutter build` - Compilar la aplicación
+```bash
+cd packages/frontend
+flutter run              # Ejecutar en emulador/dispositivo
+flutter build apk        # Compilar APK
+```
 
-## Convenciones generales
-- El código debe estar en español (comentarios, nombres de variables, mensajes)
-- Usar nomenclatura descriptiva y semántica
-- Mantener la consistencia con el código existente
+## Variables de Entorno
+
+El backend requiere un archivo `.env` en `packages/backend/`:
+```
+NODE_ENV=development
+PORT=3000
+DATABASE_URL="file:./prisma/dev.db"
+```
+
+## Convenciones
+
+- **Backend**: Siempre usar TypeScript estricto
+- **Frontend**: Seguir guías de estilo de Flutter
+- **API**: Todas las respuestas usan formato estandarizado de [ApiResponse](mdc:packages/backend/src/models/ApiResponse.ts)
+- **Base de datos**: Todas las modificaciones del esquema deben hacerse vía migraciones de Prisma

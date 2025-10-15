@@ -1,56 +1,193 @@
 ---
-alwaysApply: true
+globs: packages/backend/**/*.ts,packages/backend/**/*.js
+description: Convenciones de código para el backend Express + TypeScript
 ---
-# Convenciones del Backend
 
-## Estructura de archivos
-- Los controladores van en `src/controllers/`
-- Las rutas van en `src/routes/`
-- Los modelos y DTOs van en `src/models/`
-- Los middlewares van en `src/middlewares/`
-- La configuración va en `src/config/`
+# Convenciones de Backend
 
-## Patrones de código
+Este documento define las convenciones y mejores prácticas para el desarrollo del backend.
 
-### Controladores
-- Usar `asyncHandler` para manejar errores automáticamente
-- Devolver siempre objetos con estructura consistente:
+## Arquitectura
+
+El backend sigue el patrón **MVC** (Model-View-Controller) adaptado para APIs:
+
+- **Models**: Definidos en Prisma ([schema.prisma](mdc:packages/backend/prisma/schema.prisma))
+- **Controllers**: Lógica de negocio en [src/controllers/](mdc:packages/backend/src/controllers/)
+- **Routes**: Definición de endpoints en [src/routes/](mdc:packages/backend/src/routes/)
+
+## Estilo de Código
+
+### TypeScript
+
+- Usar **TypeScript estricto** con tipos explícitos
+- Evitar el uso de `any`, preferir tipos específicos o `unknown`
+- Definir interfaces para todos los DTOs y modelos
+- Usar `async/await` en lugar de Promises con `.then()`
+
+### Naming Conventions
+
+- **Archivos**: camelCase para archivos TypeScript (e.g., `usuarioController.ts`)
+- **Clases e Interfaces**: PascalCase (e.g., `CreateUsuarioDto`, `ApiResponse`)
+- **Funciones y Variables**: camelCase (e.g., `getUsuarios`, `createError`)
+- **Constantes**: UPPER_SNAKE_CASE (e.g., `DEFAULT_PAGE_SIZE`)
+
+## Patrones de Controladores
+
+### Uso de asyncHandler
+
+Todos los controladores deben usar el wrapper `asyncHandler` de [errorHandler](mdc:packages/backend/src/middlewares/errorHandler.ts):
+
 ```typescript
-{
-  success: boolean,
-  data?: any,
-  message?: string,
-  error?: { message: string, statusCode: number }
+export const getUsuario = asyncHandler(async (req: Request, res: Response) => {
+  // Lógica del controlador
+});
+```
+
+### Respuestas Estandarizadas
+
+Usar siempre los helpers de [ApiResponse](mdc:packages/backend/src/models/ApiResponse.ts):
+
+```typescript
+// Respuesta exitosa
+const response = createSuccessResponse(data, 'Mensaje', statusCode);
+res.json(response);
+
+// Respuesta paginada
+const response = createPaginatedResponse(data, meta, 'Mensaje');
+res.json(response);
+
+// Respuesta de error (se maneja automáticamente con throw)
+throw createError('Mensaje de error', 400, 'ERROR_CODE');
+```
+
+### Validación de IDs Numéricos
+
+Siempre validar y convertir IDs de parámetros:
+
+```typescript
+const { id } = req.params;
+const usuarioId = parseInt(id);
+
+if (isNaN(usuarioId)) {
+  throw createError('ID inválido', 400, 'INVALID_ID');
 }
 ```
 
-### Manejo de errores
-- Usar `createError(message, statusCode)` para errores personalizados
-- Los errores se manejan automáticamente por el middleware [errorHandler](mdc:packages/backend/src/middlewares/errorHandler.ts)
+## Paginación
 
-### Validaciones
-- Validar IDs numéricos con `parseInt()` y verificar con `isNaN()`
-- Validar campos requeridos antes de operaciones de BD
-- Verificar existencia de registros antes de actualizar/eliminar
-- Verificar unicidad de emails u otros campos únicos
+Usar las utilidades de [pagination.ts](mdc:packages/backend/src/utils/pagination.ts):
 
-### Prisma
-- Importar siempre desde: `import { prisma } from '../config/database'`
-- Usar métodos de Prisma: `findMany`, `findUnique`, `create`, `update`, `delete`
-- Ordenar resultados con `orderBy` cuando sea apropiado
+```typescript
+const query = req.query as PaginationQuery;
+const options = parsePaginationQuery(query);
+const prismaOptions = createPrismaPaginationOptions(options);
 
-### TypeScript
-- Tipar todas las funciones y variables
-- Usar interfaces para DTOs (CreateDto, UpdateDto)
-- Importar tipos de Express: `Request`, `Response`
+const [items, total] = await Promise.all([
+  prisma.model.findMany(prismaOptions),
+  prisma.model.count({ where: prismaOptions.where })
+]);
 
-### Respuestas HTTP
-- 200: OK (operaciones exitosas)
-- 201: Created (recursos creados)
-- 400: Bad Request (validación fallida)
-- 404: Not Found (recurso no encontrado)
-- 409: Conflict (conflicto de unicidad)
-- 500: Internal Server Error (errores del servidor)
+const meta = calculatePaginationMeta(options.page, options.limit, total);
+```
 
-## Ejemplo de controlador
-Ver [usuarioController.ts](mdc:packages/backend/src/controllers/usuarioController.ts) como referencia.
+## Validación con express-validator
+
+Crear validadores en [src/validators/](mdc:packages/backend/src/validators/):
+
+```typescript
+export const createUsuarioValidator = [
+  body('email').isEmail().withMessage('Email inválido'),
+  body('nombre').notEmpty().withMessage('Nombre requerido'),
+  // ... más validaciones
+];
+```
+
+Aplicar en las rutas con el middleware `validate` de [validator.ts](mdc:packages/backend/src/middlewares/validator.ts):
+
+```typescript
+router.post('/', createUsuarioValidator, validate, createUsuario);
+```
+
+## Manejo de Errores
+
+### Errores Personalizados
+
+Usar `createError` del [errorHandler](mdc:packages/backend/src/middlewares/errorHandler.ts):
+
+```typescript
+throw createError(
+  'Mensaje de error',
+  statusCode,  // 400, 404, 500, etc.
+  'ERROR_CODE' // Código único para el frontend
+);
+```
+
+### Códigos de Error Comunes
+
+- `INVALID_ID`: ID inválido en parámetros
+- `NOT_FOUND`: Recurso no encontrado
+- `ALREADY_EXISTS`: Recurso duplicado
+- `VALIDATION_ERROR`: Error de validación
+- `UNAUTHORIZED`: Sin autenticación
+- `FORBIDDEN`: Sin permisos
+
+## Prisma
+
+### Queries
+
+- Usar siempre `Promise.all()` para queries paralelas
+- Validar existencia antes de actualizar o eliminar
+- Usar transacciones para operaciones complejas
+
+```typescript
+// Queries paralelas
+const [usuarios, total] = await Promise.all([
+  prisma.usuario.findMany(options),
+  prisma.usuario.count({ where: options.where })
+]);
+```
+
+### Migraciones
+
+1. Modificar [schema.prisma](mdc:packages/backend/prisma/schema.prisma)
+2. Ejecutar: `npm run prisma:migrate`
+3. Nunca editar migraciones generadas manualmente
+
+## Upload de Archivos
+
+Usar el middleware de [upload.ts](mdc:packages/backend/src/middlewares/upload.ts):
+
+```typescript
+router.post('/upload', uploadSingle('file'), (req, res) => {
+  const file = req.file;
+  // Procesar archivo
+});
+```
+
+## Logging
+
+Usar el logger de [logger.ts](mdc:packages/backend/src/middlewares/logger.ts):
+
+```typescript
+import { logger } from '../middlewares/logger';
+
+logger.info({ data }, 'Mensaje de información');
+logger.error({ error }, 'Mensaje de error');
+logger.warn({ data }, 'Mensaje de advertencia');
+```
+
+## Seguridad
+
+- Helmet ya configurado para headers de seguridad
+- CORS configurado para Flutter (localhost + emulador Android)
+- Validar TODOS los inputs del usuario
+- Sanitizar datos antes de guardar en BD
+- Limitar tamaño de requests (10mb configurado)
+
+## Testing
+
+Cuando escribas tests (futuro):
+- Un archivo de test por cada controlador
+- Usar jest o vitest
+- Mockear Prisma client
+- Tests de integración para rutas completas
