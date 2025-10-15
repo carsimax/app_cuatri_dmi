@@ -1,23 +1,55 @@
-import { Request, Response, NextFunction } from 'express';
+import pino from 'pino';
+import pinoHttp from 'pino-http';
+import { config } from '../config/env';
 
-export const logger = (req: Request, res: Response, next: NextFunction): void => {
-  const start = Date.now();
-  const timestamp = new Date().toISOString();
-  
-  // Log de la petición entrante
-  console.log(`📥 ${req.method} ${req.url} - ${timestamp}`);
-  
-  // Interceptar el método end para loggear la respuesta
-  const originalEnd = res.end;
-  res.end = function(chunk?: any, encoding?: any, cb?: any) {
-    const duration = Date.now() - start;
-    const statusColor = res.statusCode >= 400 ? '🔴' : res.statusCode >= 300 ? '🟡' : '🟢';
-    
-    console.log(`📤 ${statusColor} ${req.method} ${req.url} - ${res.statusCode} - ${duration}ms`);
-    
-    // Llamar al método end original
-    return originalEnd.call(this, chunk, encoding, cb);
-  };
-  
-  next();
-};
+// Configurar logger de Pino
+const logger = pino({
+  level: config.nodeEnv === 'production' ? 'info' : 'debug',
+  transport: config.nodeEnv !== 'production' ? {
+    target: 'pino-pretty',
+    options: {
+      colorize: true,
+      translateTime: 'SYS:standard',
+      ignore: 'pid,hostname',
+      singleLine: false,
+      hideObject: false,
+    },
+  } : undefined,
+  base: {
+    env: config.nodeEnv,
+  },
+});
+
+// Middleware HTTP de Pino
+export const httpLogger = pinoHttp({
+  logger,
+  customLogLevel: function (req, res, err) {
+    if (res.statusCode >= 400 && res.statusCode < 500) {
+      return 'warn';
+    } else if (res.statusCode >= 500 || err) {
+      return 'error';
+    }
+    return 'info';
+  },
+  customSuccessMessage: function (req, res) {
+    if (res.statusCode === 404) {
+      return 'Ruta no encontrada';
+    }
+    return `${req.method} ${req.url} completado`;
+  },
+  customErrorMessage: function (req, res, err) {
+    return `${req.method} ${req.url} error: ${err.message}`;
+  },
+  customProps: function (req, res) {
+    return {
+      method: req.method,
+      url: req.url,
+      statusCode: res.statusCode,
+      responseTime: (res as any).responseTime,
+      userAgent: req.headers['user-agent'],
+    };
+  },
+});
+
+export { logger };
+export default httpLogger;

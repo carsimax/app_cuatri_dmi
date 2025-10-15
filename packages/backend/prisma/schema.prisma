@@ -22,15 +22,3 @@ model Usuario {
   @@map("usuarios")
 }
 
-model Producto {
-  id          Int      @id @default(autoincrement())
-  nombre      String
-  descripcion String?
-  precio      Float
-  stock       Int      @default(0)
-  activo      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  @@map("productos")
-}

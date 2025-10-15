@@ -3,12 +3,11 @@ import cors from 'cors';
 import helmet from 'helmet';
 import { config } from './config/env';
 import { database } from './config/database';
-import { logger } from './middlewares/logger';
+import { httpLogger, logger } from './middlewares/logger';
 import { errorHandler } from './middlewares/errorHandler';
 
 // Importar rutas
 import usuarioRoutes from './routes/usuarioRoutes';
-import productoRoutes from './routes/productoRoutes';
 
 const app = express();
 
@@ -24,7 +23,7 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
 // Middleware de logging
-app.use(logger);
+app.use(httpLogger);
 
 // Rutas
 app.get('/health', (req, res) => {
@@ -44,14 +43,12 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/health',
       usuarios: '/api/usuarios',
-      productos: '/api/productos',
     },
   });
 });
 
 // Rutas de la API
 app.use('/api/usuarios', usuarioRoutes);
-app.use('/api/productos', productoRoutes);
 
 // Middleware de manejo de errores (debe ir al final)
 app.use(errorHandler);
@@ -75,26 +72,28 @@ const startServer = async (): Promise<void> => {
 
     // Iniciar servidor
     app.listen(config.port, () => {
-      console.log(`🚀 Servidor ejecutándose en puerto ${config.port}`);
-      console.log(`📊 Entorno: ${config.nodeEnv}`);
-      console.log(`🌐 URL: http://localhost:${config.port}`);
-      console.log(`💾 Base de datos: ${config.databaseUrl}`);
+      logger.info({
+        port: config.port,
+        environment: config.nodeEnv,
+        url: `http://localhost:${config.port}`,
+        database: config.databaseUrl,
+      }, '🚀 Servidor iniciado correctamente');
     });
   } catch (error) {
-    console.error('❌ Error al iniciar el servidor:', error);
+    logger.error({ error }, '❌ Error al iniciar el servidor');
     process.exit(1);
   }
 };
 
 // Manejo de cierre graceful
 process.on('SIGTERM', async () => {
-  console.log('🛑 SIGTERM recibido, cerrando servidor...');
+  logger.info('🛑 SIGTERM recibido, cerrando servidor...');
   await database.disconnect();
   process.exit(0);
 });
 
 process.on('SIGINT', async () => {
-  console.log('🛑 SIGINT recibido, cerrando servidor...');
+  logger.info('🛑 SIGINT recibido, cerrando servidor...');
   await database.disconnect();
   process.exit(0);
 });
