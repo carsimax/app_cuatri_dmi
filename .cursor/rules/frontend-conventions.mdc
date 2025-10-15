@@ -3,48 +3,238 @@ alwaysApply: true
 ---
 # Convenciones del Frontend (Flutter)
 
+## Arquitectura MVVM
+
+Este proyecto usa el patrón **MVVM (Model-View-ViewModel)** con Provider para gestión de estado.
+
 ## Estructura de archivos
-- El punto de entrada es [main.dart](mdc:packages/frontend/lib/main.dart)
-- Organizar código en carpetas dentro de `lib/`:
-  - `screens/` - Pantallas de la aplicación
-  - `widgets/` - Widgets reutilizables
-  - `models/` - Modelos de datos
-  - `services/` - Servicios (API, base de datos local, etc.)
-  - `providers/` o `bloc/` - Gestión de estado
-  - `utils/` - Utilidades y helpers
 
-## Patrones de código
+El punto de entrada es [main.dart](mdc:packages/frontend/lib/main.dart)
 
-### Widgets
-- Usar `const` constructors cuando sea posible para optimización
-- Preferir StatelessWidget sobre StatefulWidget cuando no haya estado
-- Extraer widgets complejos a archivos separados
+```
+lib/
+├── main.dart                    # Punto de entrada
+├── models/                      # Modelos de datos (Model)
+│   ├── usuario.dart
+│   └── producto.dart
+├── services/                    # Servicios de datos
+│   ├── api_service.dart        # Cliente HTTP base
+│   ├── usuario_service.dart    # Servicio de usuarios
+│   └── producto_service.dart   # Servicio de productos
+├── providers/                   # ViewModels (lógica de negocio)
+│   ├── usuario_provider.dart
+│   └── producto_provider.dart
+├── screens/                     # Views (pantallas)
+│   ├── home/
+│   │   └── home_screen.dart
+│   ├── usuarios/
+│   │   ├── usuarios_screen.dart
+│   │   └── usuario_detalle_screen.dart
+│   └── productos/
+│       ├── productos_screen.dart
+│       └── producto_detalle_screen.dart
+└── widgets/                     # Widgets reutilizables
+    ├── loading_widget.dart
+    ├── error_widget.dart
+    └── custom_card.dart
+```
 
-### Nomenclatura
-- Clases: PascalCase (ej: `MiWidget`)
-- Archivos: snake_case (ej: `mi_widget.dart`)
-- Variables y funciones: camelCase (ej: `miVariable`)
-- Constantes: camelCase con const (ej: `const miConstante`)
+## Responsabilidades de cada capa
+
+### Models (`models/`)
+- **Qué son**: Clases que representan los datos
+- **Responsabilidad**: Estructura de datos, serialización JSON
+- **Ejemplo**:
+```dart
+class Usuario {
+  final int id;
+  final String email;
+  final String nombre;
+  
+  Usuario({required this.id, required this.email, required this.nombre});
+  
+  factory Usuario.fromJson(Map<String, dynamic> json) {
+    return Usuario(
+      id: json['id'],
+      email: json['email'],
+      nombre: json['nombre'],
+    );
+  }
+}
+```
+
+### Services (`services/`)
+- **Qué son**: Clases que manejan comunicación con APIs y fuentes de datos
+- **Responsabilidad**: Peticiones HTTP, manejo de endpoints, errores de red
+- **No contienen**: Lógica de negocio o estado de la UI
+- **Ejemplo**:
+```dart
+class UsuarioService {
+  final ApiService _apiService;
+  
+  Future<List<Usuario>> obtenerUsuarios() async {
+    final response = await _apiService.get('/usuarios');
+    // Retorna datos, no maneja estado
+    return (response['data'] as List)
+        .map((json) => Usuario.fromJson(json))
+        .toList();
+  }
+}
+```
+
+### Providers (`providers/`)
+- **Qué son**: ViewModels que contienen la lógica de negocio y estado
+- **Responsabilidad**: Estado de la UI, lógica de negocio, orquestación de servicios
+- **Extienden**: `ChangeNotifier` de Provider
+- **Notifican**: Cambios a la UI con `notifyListeners()`
+- **Ejemplo**:
+```dart
+class UsuarioProvider extends ChangeNotifier {
+  final UsuarioService _usuarioService;
+  
+  List<Usuario> _usuarios = [];
+  bool _isLoading = false;
+  String? _error;
+  
+  List<Usuario> get usuarios => _usuarios;
+  bool get isLoading => _isLoading;
+  String? get error => _error;
+  
+  Future<void> cargarUsuarios() async {
+    _isLoading = true;
+    _error = null;
+    notifyListeners();
+    
+    try {
+      _usuarios = await _usuarioService.obtenerUsuarios();
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+}
+```
+
+### Screens (`screens/`)
+- **Qué son**: Las vistas/pantallas de la aplicación (View en MVVM)
+- **Responsabilidad**: Construcción de la UI, responder a interacciones del usuario
+- **No contienen**: Lógica de negocio (va en providers)
+- **Usan**: `Consumer` o `Provider.of` para acceder a los providers
+- **Ejemplo**:
+```dart
+class UsuariosScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<UsuarioProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
+          return LoadingWidget();
+        }
+        
+        if (provider.error != null) {
+          return ErrorWidget(message: provider.error!);
+        }
+        
+        return ListView.builder(
+          itemCount: provider.usuarios.length,
+          itemBuilder: (context, index) {
+            final usuario = provider.usuarios[index];
+            return ListTile(title: Text(usuario.nombre));
+          },
+        );
+      },
+    );
+  }
+}
+```
+
+### Widgets (`widgets/`)
+- **Qué son**: Componentes de UI reutilizables
+- **Responsabilidad**: UI pequeña y reutilizable sin lógica de negocio
+- **Preferir**: StatelessWidget cuando sea posible
+- **Usar**: `const` constructors para optimización
+
+## Nomenclatura
+
+- **Clases**: PascalCase (ej: `UsuarioProvider`, `HomeScreen`)
+- **Archivos**: snake_case (ej: `usuario_provider.dart`, `home_screen.dart`)
+- **Variables y funciones**: camelCase (ej: `cargarUsuarios`, `isLoading`)
+- **Constantes**: camelCase con const (ej: `const apiBaseUrl`)
+- **Privados**: Prefijo `_` (ej: `_usuarios`, `_apiService`)
+
+## Flujo de datos MVVM
+
+```
+Screen (View) → Provider (ViewModel) → Service → Backend API
+                    ↓
+                notifyListeners()
+                    ↓
+             Screen actualiza UI
+```
+
+1. **Screen** llama método del **Provider**
+2. **Provider** usa **Service** para obtener datos
+3. **Service** hace petición al **Backend**
+4. **Service** retorna datos al **Provider**
+5. **Provider** actualiza estado y llama `notifyListeners()`
+6. **Screen** se reconstruye automáticamente con nuevos datos
+
+## Configuración en main.dart
+
+```dart
+void main() {
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => UsuarioProvider(UsuarioService())),
+        ChangeNotifierProvider(create: (_) => ProductoProvider(ProductoService())),
+      ],
+      child: const MyApp(),
+    ),
+  );
+}
+```
+
+## Buenas prácticas
+
+### General
+- Comentar código complejo en español
+- Usar nombres descriptivos y semánticos
+- Mantener archivos pequeños y enfocados (< 300 líneas)
 
 ### Material Design
 - Usar Material 3 (`useMaterial3: true`)
 - Usar ThemeData para temas consistentes
 - Aprovechar widgets de Material Design
 
-### Gestión de estado
-- Para estado simple: setState
-- Para estado complejo: Provider, Riverpod, Bloc, o similar
-- Mantener la lógica de negocio separada de la UI
+### Widgets
+- Usar `const` constructors siempre que sea posible
+- Preferir StatelessWidget sobre StatefulWidget
+- Extraer widgets complejos a archivos separados
+- Evitar widgets muy anidados (extraer a métodos o widgets)
+
+### Providers
+- Un provider por funcionalidad/entidad
+- Mantener providers enfocados en una responsabilidad
+- Usar `_isLoading` y `_error` para estados comunes
+- Llamar `notifyListeners()` después de cambios de estado
+
+### Services
+- Un service por API/recurso
+- Servicios no tienen estado (stateless)
+- Servicios solo retornan datos, no manejan estado de UI
+- Manejar errores y lanzar excepciones apropiadas
 
 ### Comunicación con Backend
-- Crear un servicio dedicado para llamadas API
-- Usar http o dio para peticiones HTTP
-- Endpoint base del backend: `http://localhost:3000/api`
+- Endpoint base: `http://localhost:3000/api`
+- Usar paquete `http` o `dio` para peticiones HTTP
+- Crear un `ApiService` base para configuración común
 - Manejar errores de red apropiadamente
-
-### Buenas prácticas
-- Comentar código complejo en español
-- Usar nombres descriptivos
-- Evitar widgets muy anidados (extraer a funciones/widgets)
 - Usar async/await para operaciones asíncronas
-- Manejar estados de carga y error en la UI
+
+### Testing
+- Models deben ser fáciles de testear (sin dependencias)
+- Services pueden mockearse para testing de Providers
+- Providers contienen la lógica a testear
