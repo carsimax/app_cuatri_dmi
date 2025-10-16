@@ -11,7 +11,7 @@ class ErrorMessage extends StatelessWidget {
   final bool showIcon;
 
   const ErrorMessage({
-    Key? key,
+    super.key,
     required this.message,
     this.onRetry,
     this.icon,
@@ -20,11 +20,11 @@ class ErrorMessage extends StatelessWidget {
     this.padding,
     this.borderRadius,
     this.showIcon = true,
-  }) : super(key: key);
+  });
 
   /// Mensaje de error simple
   const ErrorMessage.simple({
-    Key? key,
+    super.key,
     required this.message,
     this.backgroundColor,
     this.textColor,
@@ -32,11 +32,11 @@ class ErrorMessage extends StatelessWidget {
     this.borderRadius,
     this.showIcon = true,
     this.icon,
-  }) : onRetry = null, super(key: key);
+  }) : onRetry = null;
 
   /// Mensaje de error con botón de reintento
   const ErrorMessage.withRetry({
-    Key? key,
+    super.key,
     required this.message,
     required this.onRetry,
     this.backgroundColor,
@@ -45,7 +45,7 @@ class ErrorMessage extends StatelessWidget {
     this.borderRadius,
     this.showIcon = true,
     this.icon,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -109,11 +109,11 @@ class FormErrorMessage extends StatelessWidget {
   final Color? textColor;
 
   const FormErrorMessage({
-    Key? key,
+    super.key,
     required this.message,
     this.padding,
     this.textColor,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -156,7 +156,7 @@ class SuccessMessage extends StatelessWidget {
   final double? borderRadius;
 
   const SuccessMessage({
-    Key? key,
+    super.key,
     required this.message,
     this.onDismiss,
     this.icon,
@@ -164,7 +164,7 @@ class SuccessMessage extends StatelessWidget {
     this.textColor,
     this.padding,
     this.borderRadius,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -229,7 +229,7 @@ class InfoMessage extends StatelessWidget {
   final double? borderRadius;
 
   const InfoMessage({
-    Key? key,
+    super.key,
     required this.message,
     this.onDismiss,
     this.icon,
@@ -237,7 +237,7 @@ class InfoMessage extends StatelessWidget {
     this.textColor,
     this.padding,
     this.borderRadius,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

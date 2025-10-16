@@ -27,7 +27,7 @@ class CustomTextField extends StatefulWidget {
   final bool filled;
 
   const CustomTextField({
-    Key? key,
+    super.key,
     required this.label,
     this.hint,
     this.controller,
@@ -52,7 +52,7 @@ class CustomTextField extends StatefulWidget {
     this.errorBorder,
     this.fillColor,
     this.filled = false,
-  }) : super(key: key);
+  });
 
   @override
   State<CustomTextField> createState() => _CustomTextFieldState();

@@ -16,7 +16,7 @@ class CustomButton extends StatelessWidget {
   final BorderSide? side;
 
   const CustomButton({
-    Key? key,
+    super.key,
     required this.text,
     this.onPressed,
     this.isLoading = false,
@@ -30,11 +30,11 @@ class CustomButton extends StatelessWidget {
     this.foregroundColor,
     this.borderRadius,
     this.side,
-  }) : super(key: key);
+  });
 
   /// Botón primario (elevated)
   const CustomButton.primary({
-    Key? key,
+    super.key,
     required this.text,
     this.onPressed,
     this.isLoading = false,
@@ -48,11 +48,11 @@ class CustomButton extends StatelessWidget {
     this.foregroundColor,
     this.borderRadius,
     this.side,
-  }) : super(key: key);
+  });
 
   /// Botón secundario (outlined)
   const CustomButton.secondary({
-    Key? key,
+    super.key,
     required this.text,
     this.onPressed,
     this.isLoading = false,
@@ -66,11 +66,11 @@ class CustomButton extends StatelessWidget {
     this.foregroundColor,
     this.borderRadius,
     this.side,
-  }) : super(key: key);
+  });
 
   /// Botón de texto
   const CustomButton.text({
-    Key? key,
+    super.key,
     required this.text,
     this.onPressed,
     this.isLoading = false,
@@ -84,7 +84,7 @@ class CustomButton extends StatelessWidget {
     this.foregroundColor,
     this.borderRadius,
     this.side,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -179,7 +179,7 @@ class CustomOutlinedButton extends StatelessWidget {
   final BorderSide? side;
 
   const CustomOutlinedButton({
-    Key? key,
+    super.key,
     required this.text,
     this.onPressed,
     this.isLoading = false,
@@ -192,7 +192,7 @@ class CustomOutlinedButton extends StatelessWidget {
     this.foregroundColor,
     this.borderRadius,
     this.side,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -283,7 +283,7 @@ class CustomTextButton extends StatelessWidget {
   final double? borderRadius;
 
   const CustomTextButton({
-    Key? key,
+    super.key,
     required this.text,
     this.onPressed,
     this.isLoading = false,
@@ -295,7 +295,7 @@ class CustomTextButton extends StatelessWidget {
     this.height,
     this.foregroundColor,
     this.borderRadius,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
