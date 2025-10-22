@@ -317,3 +317,43 @@ export const firebaseLogin = asyncHandler(async (req: Request, res: Response) =>
 
   res.json(createSuccessResponse(response, 'Login exitoso'));
 });
+
+export const registerFcmToken = asyncHandler(async (req: Request, res: Response) => {
+  if (!req.user) {
+    throw createError('Usuario no autenticado', 401, 'USER_NOT_AUTHENTICATED');
+  }
+
+  const { fcmToken } = req.body;
+
+  if (!fcmToken) {
+    throw createError('Token FCM requerido', 400, 'FCM_TOKEN_REQUIRED');
+  }
+
+  // Obtener tokens existentes
+  const usuario = await prisma.usuario.findUnique({
+    where: { id: req.user.id },
+    select: { fcmTokens: true },
+  });
+
+  let tokens: string[] = [];
+  if (usuario?.fcmTokens) {
+    try {
+      tokens = JSON.parse(usuario.fcmTokens);
+    } catch (e) {
+      tokens = [];
+    }
+  }
+
+  // Agregar nuevo token si no existe
+  if (!tokens.includes(fcmToken)) {
+    tokens.push(fcmToken);
+  }
+
+  // Actualizar en la BD
+  await prisma.usuario.update({
+    where: { id: req.user.id },
+    data: { fcmTokens: JSON.stringify(tokens) },
+  });
+
+  res.json(createSuccessResponse(null, 'Token FCM registrado exitosamente'));
+});

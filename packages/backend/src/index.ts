@@ -11,6 +11,7 @@ import { createSuccessResponse } from './models/ApiResponse';
 // Importar rutas
 import usuarioRoutes from './routes/usuarioRoutes';
 import authRoutes from './routes/authRoutes';
+import notificationRoutes from './routes/notificationRoutes';
 
 const app = express();
 
@@ -81,6 +82,8 @@ setupStaticFiles(app);
 
 // Middleware de logging
 app.use(httpLogger);
+
+app.use('/api/notifications', notificationRoutes);
 
 // Rutas de health check y documentación
 app.get('/health', (req, res) => {
