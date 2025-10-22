@@ -64,7 +64,9 @@ export interface UsuarioSafe {
  * @param usuario - Usuario completo de la base de datos
  * @returns Usuario sin campos sensibles
  */
-export const excludePassword = (usuario: UsuarioComplete): UsuarioSafe => {
-  const { password, ...usuarioSafe } = usuario;
-  return usuarioSafe;
+export function excludePassword<T extends { password?: string | null }>(usuario: T): Omit<T, 'password'> {
+    // Desestructuramos y eliminamos password incluso si es null/undefined
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { password, ...rest } = usuario as any;
+    return rest as Omit<T, 'password'>;
 };

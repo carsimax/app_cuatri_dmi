@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "519588029079",
+    "project_id": "carsimax-10c-dmi",
+    "storage_bucket": "carsimax-10c-dmi.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:519588029079:android:2e16d3eaf6bb18e72f7fd2",
+        "android_client_info": {
+          "package_name": "com.example.frontned"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "519588029079-3qf91ts9kunn0pi1581tp406gi23bmu7.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.frontned",
+            "certificate_hash": "8fe9cbfc138272b6576e6d49dc23871a16e52c4d"
+          }
+        },
+        {
+          "client_id": "519588029079-hakl4b1blng0m739bi3tlljvc6vo667n.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtYG_j8qtmPU8veFu9oLK7eSsXRHfjJ0g"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "519588029079-hakl4b1blng0m739bi3tlljvc6vo667n.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
