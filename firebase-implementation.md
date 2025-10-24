@@ -22,7 +22,7 @@ Este documento describe el proceso completo para integrar Firebase Authenticatio
 1. En la página de inicio del proyecto, hacer clic en el ícono de Android
 2. Registrar la app:
 
-   - **Android package name**: `com.example.frontned` (debe coincidir exactamente con `applicationId` en `android/app/build.gradle.kts`)
+   - **Android package name**: `com.utez.frontend` (debe coincidir exactamente con `applicationId` en `android/app/build.gradle.kts`)
    - **App nickname**: `App Cuatri DMI Android` (opcional)
    - **Debug signing certificate SHA-1**: Dejar vacío por ahora (lo configuraremos después para Google Sign-In)
 
@@ -585,12 +585,12 @@ plugins {
 }
 
 android {
-    namespace = "com.example.frontned"
+    namespace = "com.utez.frontend"
     compileSdk = flutter.compileSdkVersion
     // Actualizar minSdk para Firebase
     
     defaultConfig {
-        applicationId = "com.example.frontned"
+        applicationId = "com.utez.frontend"
         minSdk = 21  // ← Cambiar de flutter.minSdkVersion a 21 (requerido por Firebase)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

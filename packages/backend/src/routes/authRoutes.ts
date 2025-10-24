@@ -10,12 +10,13 @@ import {
 } from '../controllers/authController';
 import { authenticate } from '../middlewares/auth';
 import { validate } from '../middlewares/validator';
+import { registerFcmToken,firebaseLogin } from '../controllers/authController';
 import { 
   registerValidator, 
   loginValidator,
   updateProfileValidator,
   changePasswordValidator,
-  verifyEmailValidator
+  verifyEmailValidator,
 } from '../validators/authValidator';
 
 const router = Router();
@@ -68,5 +69,9 @@ router.put('/change-password', authenticate, validate(changePasswordValidator), 
  * @access  Public
  */
 router.post('/verify-email', validate(verifyEmailValidator), verifyEmail);
+
+
+router.post('/firebase-login', firebaseLogin);
+router.post('/fcm-token', authenticate, registerFcmToken);
 
 export default router;

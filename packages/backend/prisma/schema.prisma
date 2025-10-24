@@ -13,7 +13,7 @@ datasource db {
 model Usuario {
   id                Int      @id @default(autoincrement())
   email             String   @unique
-  password          String
+  password          String?
   nombre            String
   apellido          String
   activo            Boolean  @default(true)
@@ -21,6 +21,14 @@ model Usuario {
   verificationToken String?  @unique
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
+
+  // Campos Firebase
+  firebaseUid       String?  @unique  // UID de Firebase Auth
+  authProvider      String   @default("local")  // "local", "google.com"
+  photoURL          String?  // URL de foto de perfil (de Google)
+  
+  // Tokens FCM para notificaciones push
+  fcmTokens         String?  // JSON array de tokens
 
   @@map("usuarios")
 }

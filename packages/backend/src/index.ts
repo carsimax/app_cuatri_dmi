@@ -11,6 +11,7 @@ import { createSuccessResponse } from './models/ApiResponse';
 // Importar rutas
 import usuarioRoutes from './routes/usuarioRoutes';
 import authRoutes from './routes/authRoutes';
+import notificationRoutes from './routes/notificationRoutes';
 
 const app = express();
 
@@ -75,6 +76,8 @@ app.use(express.urlencoded({
   extended: true,
   limit: '10mb'
 }));
+
+app.use('/api/notifications', notificationRoutes);
 
 // Configurar archivos estáticos para uploads
 setupStaticFiles(app);
