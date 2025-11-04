@@ -23,7 +23,7 @@ class AuthProvider extends ChangeNotifier {
     try {
       _authService.initialize();
       await _authService.loadStoredSession();
-      
+
       // Verificar si hay una sesión guardada
       if (await _authService.hasStoredSession()) {
         await _validateStoredSession();
@@ -56,13 +56,10 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Inicia sesión con email y contraseña
-  Future<bool> login({
-    required String email,
-    required String password,
-  }) async {
+  Future<bool> login({required String email, required String password}) async {
     _setLoading(true);
     _clearError();
-    
+
     try {
       final authResponse = await _authService.login(
         email: email,
@@ -71,7 +68,7 @@ class AuthProvider extends ChangeNotifier {
 
       _setUser(authResponse.user);
       _setAuthenticated(true);
-      
+
       return true;
     } catch (e) {
       _setError(_getErrorMessage(e));
@@ -90,7 +87,7 @@ class AuthProvider extends ChangeNotifier {
   }) async {
     _setLoading(true);
     _clearError();
-    
+
     try {
       final authResponse = await _authService.register(
         email: email,
@@ -101,7 +98,7 @@ class AuthProvider extends ChangeNotifier {
 
       _setUser(authResponse.user);
       _setAuthenticated(true);
-      
+
       return true;
     } catch (e) {
       _setError(_getErrorMessage(e));
@@ -115,7 +112,7 @@ class AuthProvider extends ChangeNotifier {
   Future<void> logout() async {
     _isLoading = true;
     notifyListeners();
-    
+
     try {
       await _authService.logout();
       _user = null;
@@ -154,7 +151,7 @@ class AuthProvider extends ChangeNotifier {
 
     _setLoading(true);
     _clearError();
-    
+
     try {
       final updatedUser = await _authService.updateProfile(
         nombre: nombre,
@@ -184,13 +181,13 @@ class AuthProvider extends ChangeNotifier {
 
     _setLoading(true);
     _clearError();
-    
+
     try {
       await _authService.changePassword(
         currentPassword: currentPassword,
         newPassword: newPassword,
       );
-      
+
       return true;
     } catch (e) {
       _setError(_getErrorMessage(e));
@@ -208,7 +205,7 @@ class AuthProvider extends ChangeNotifier {
 
     _setLoading(true);
     _clearError();
-    
+
     try {
       final user = await _authService.getProfile();
       _setUser(user);
@@ -290,4 +287,18 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> loginWithGoogle() async {
+    _setLoading(true);
+    try {
+      final authResponse = await _authService.loginWithGoogle();
+      _user = authResponse.user;
+      _isAuthenticated = true;
+      _setError('');
+    } catch (e) {
+      _setError(e.toString());
+      rethrow;
+    } finally {
+      _setLoading(false);
+    }
+  }
 }

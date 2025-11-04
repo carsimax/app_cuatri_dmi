@@ -4,6 +4,9 @@ import '../utils/constants.dart';
 import '../utils/app_error.dart';
 import 'api_service.dart';
 import 'storage_service.dart';
+//Librerias de firebase
+import 'firebase_auth_service.dart';
+import 'firebase_messaging_service.dart';
 
 class AuthService {
   static final AuthService _instance = AuthService._internal();
@@ -12,6 +15,9 @@ class AuthService {
 
   final ApiService _apiService = ApiService();
   final StorageService _storageService = StorageService();
+
+  final FirebaseAuthService _firebaseAuth = FirebaseAuthService();
+  final FirebaseMessagingService _fcm = FirebaseMessagingService();
 
   /// Inicializa el servicio de autenticación
   void initialize() {
@@ -57,10 +63,7 @@ class AuthService {
     try {
       final response = await _apiService.post<AuthResponse>(
         ApiConstants.loginEndpoint,
-        data: {
-          'email': email,
-          'password': password,
-        },
+        data: {'email': email, 'password': password},
         fromJson: (json) => AuthResponse.fromJson(json),
       );
 
@@ -146,7 +149,7 @@ class AuthService {
     try {
       // Limpiar token de las peticiones
       _apiService.clearAuthToken();
-      
+
       // Limpiar datos locales
       await _storageService.clearAuthData();
     } catch (e) {
@@ -231,10 +234,7 @@ class AuthService {
 
       final response = await _apiService.put<Map<String, dynamic>>(
         '/api/auth/change-password',
-        data: {
-          'currentPassword': currentPassword,
-          'newPassword': newPassword,
-        },
+        data: {'currentPassword': currentPassword, 'newPassword': newPassword},
       );
 
       if (!response.success) {
@@ -251,7 +251,7 @@ class AuthService {
       _storageService.saveToken(authResponse.token),
       _storageService.saveUser(authResponse.user),
     ]);
-    
+
     // Configurar token en las peticiones
     _apiService.setAuthToken(authResponse.token);
   }
@@ -259,5 +259,95 @@ class AuthService {
   /// Verifica si hay una sesión guardada
   Future<bool> hasStoredSession() async {
     return await _storageService.hasStoredSession();
+  }
+
+  /// Login con Firebase y sincronizar con backend
+  Future<AuthResponse> loginWithFirebase(String email, String password) async {
+    try {
+      // 1. Autenticar con Firebase
+      final userCredential = await _firebaseAuth.signInWithEmailPassword(
+        email,
+        password,
+      );
+
+      // 2. Obtener ID Token de Firebase
+      final idToken = await userCredential.user?.getIdToken();
+      if (idToken == null) {
+        throw Exception('No se pudo obtener token de Firebase');
+      }
+
+      // 3. Enviar token al backend para sincronizar usuario
+      final response = await _apiService.post<AuthResponse>(
+        '/api/auth/firebase-login',
+        data: {'idToken': idToken},
+        fromJson: (json) => AuthResponse.fromJson(json),
+      );
+
+      if (response.success && response.data != null) {
+        await _saveAuthData(response.data!);
+
+        // 4. Registrar token FCM
+        await _registerFcmToken();
+
+        return response.data!;
+      } else {
+        throw Exception(response.message ?? 'Error al iniciar sesión');
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Login con Google
+  Future<AuthResponse> loginWithGoogle() async {
+    try {
+      // 1. Autenticar con Google mediante Firebase
+      final userCredential = await _firebaseAuth.signInWithGoogle();
+
+      // 2. Obtener ID Token
+      final idToken = await userCredential.user?.getIdToken();
+      if (idToken == null) {
+        throw Exception('No se pudo obtener token de Firebase');
+      }
+
+      // 3. Enviar token al backend
+      final response = await _apiService.post<AuthResponse>(
+        '/api/auth/firebase-login',
+        data: {'idToken': idToken},
+        fromJson: (json) => AuthResponse.fromJson(json),
+      );
+
+      if (response.success && response.data != null) {
+        await _saveAuthData(response.data!);
+        await _registerFcmToken();
+        return response.data!;
+      } else {
+        throw Exception(
+          response.message ?? 'Error al iniciar sesión con Google',
+        );
+      }
+    } catch (e) {
+      rethrow;
+    }
+  }
+
+  /// Registrar token FCM en el backend
+  Future<void> _registerFcmToken() async {
+    try {
+      final fcmToken = await _fcm.getToken();
+      if (fcmToken == null) return;
+
+      final token = await _storageService.getToken();
+      if (token != null) {
+        _apiService.setAuthToken(token);
+        await _apiService.post(
+          '/api/auth/fcm-token',
+          data: {'fcmToken': fcmToken},
+        );
+      }
+    } catch (e) {
+      print('Error registrando FCM token: $e');
+      // No lanzar error para no interrumpir el flujo de login
+    }
   }
 }

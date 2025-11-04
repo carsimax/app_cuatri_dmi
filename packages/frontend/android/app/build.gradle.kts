@@ -8,6 +8,9 @@ plugins {
 
 dependencies {
     implementation(platform("com.google.firebase:firebase-bom:34.4.0"))
+    implementation("androidx.multidex:multidex:2.0.1") // <-- Agregar la dependencia de multidex
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
+
 }
 
 android {
@@ -18,6 +21,7 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -29,10 +33,11 @@ android {
         applicationId = "com.example.frontned"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = flutter.minSdkVersion // <-- Cambiar la version minima a 21
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        multiDexEnabled = true // <-- Habilitar multidex
     }
 
     buildTypes {

@@ -37,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
     }
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     final success = await authProvider.login(
       email: _emailController.text.trim(),
       password: _passwordController.text,
@@ -51,9 +51,33 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   void _navigateToRegister() {
-    Navigator.of(context).push(
-      MaterialPageRoute(builder: (context) => const RegisterScreen()),
-    );
+    Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (context) => const RegisterScreen()));
+  }
+
+  bool _isGoogleLoading = false;
+
+  Future<void> _loginWithGoogle() async {
+    setState(() => _isGoogleLoading = true);
+
+    try {
+      await context.read<AuthProvider>().loginWithGoogle();
+      // Navegar a home
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isGoogleLoading = false);
+      }
+    }
   }
 
   @override
@@ -139,7 +163,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       focusNode: _passwordFocusNode,
                       obscureText: true,
                       textInputAction: TextInputAction.done,
-                      validator: (value) => Validators.required(value, 'contraseña'),
+                      validator: (value) =>
+                          Validators.required(value, 'contraseña'),
                       prefixIcon: Icon(
                         Icons.lock_outline,
                         color: theme.colorScheme.onSurfaceVariant,
@@ -173,6 +198,16 @@ class _LoginScreenState extends State<LoginScreen> {
                           isLoading: authProvider.isLoading,
                         );
                       },
+                    ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 16),
+                    CustomButton(
+                      text: 'Continuar con Google',
+                      onPressed: _loginWithGoogle,
+                      isLoading: _isGoogleLoading,
+                      backgroundColor: Colors.white,
+                      icon: const Icon(Icons.g_mobiledata, size: 32),
                     ),
                   ],
                 ),
