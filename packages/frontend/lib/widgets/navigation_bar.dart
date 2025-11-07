@@ -3,6 +3,7 @@ import '../screens/home_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/camera_screen.dart';
 import '../screens/gallery_screen.dart';
+import '../screens/record_screen.dart';
 
 class AppNavigationBar extends StatefulWidget {
   const AppNavigationBar({super.key});
@@ -19,11 +20,12 @@ class _AppNavigationBarState extends State<AppNavigationBar> {
     ProfileScreen(),
     CameraScreen(),
     GalleryScreen(),
+    RecordScreen(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final titles = <String>['Inicio', 'Perfil', 'Cámara', 'Galería'];
+    final titles = <String>['Inicio', 'Perfil', 'Cámara', 'Galería', 'Audio'];
 
     return Scaffold(
       appBar: AppBar(title: Text(titles[_currentIndex])),
@@ -50,6 +52,11 @@ class _AppNavigationBarState extends State<AppNavigationBar> {
             icon: Icon(Icons.photo_library_outlined),
             selectedIcon: Icon(Icons.photo_library),
             label: 'Galería',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.mic_outlined),
+            selectedIcon: Icon(Icons.mic),
+            label: 'Audio',
           ),
         ],
         onDestinationSelected: (index) {

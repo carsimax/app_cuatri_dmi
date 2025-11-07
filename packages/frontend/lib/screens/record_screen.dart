@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:record/record.dart';
-import 'package:audioplayers/audioplayers.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'package:audioplayers/audioplayers.dart' as ap;
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
@@ -14,9 +14,10 @@ class RecordScreen extends StatefulWidget {
 }
 
 class _RecordScreenState extends State<RecordScreen> {
-  final AudioRecorder _audioRecorder = AudioRecorder();
-  final AudioPlayer _audioPlayer = AudioPlayer();
-  
+  FlutterSoundRecorder? _audioRecorder;
+  final ap.AudioPlayer _audioPlayer = ap.AudioPlayer();
+
+  bool _isRecorderInitialized = false;
   bool _isRecording = false;
   bool _isPaused = false;
   List<File> _recordings = [];
@@ -24,19 +25,29 @@ class _RecordScreenState extends State<RecordScreen> {
   bool _isPlaying = false;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
-  
+  String? _currentRecordingPath;
+
   @override
   void initState() {
     super.initState();
+    _initRecorder();
     _loadRecordings();
     _setupAudioPlayer();
+  }
+
+  Future<void> _initRecorder() async {
+    _audioRecorder = FlutterSoundRecorder();
+    await _audioRecorder!.openRecorder();
+    setState(() {
+      _isRecorderInitialized = true;
+    });
   }
 
   void _setupAudioPlayer() {
     _audioPlayer.onPlayerStateChanged.listen((state) {
       if (mounted) {
         setState(() {
-          _isPlaying = state == PlayerState.playing;
+          _isPlaying = state == ap.PlayerState.playing;
         });
       }
     });
@@ -78,10 +89,12 @@ class _RecordScreenState extends State<RecordScreen> {
         final files = recordingsDir.listSync();
         final audioFiles = files
             .whereType<File>()
-            .where((file) =>
-                file.path.endsWith('.m4a') ||
-                file.path.endsWith('.aac') ||
-                file.path.endsWith('.mp3'))
+            .where(
+              (file) =>
+                  file.path.endsWith('.aac') ||
+                  file.path.endsWith('.mp3') ||
+                  file.path.endsWith('.wav'),
+            )
             .toList();
 
         // Ordenar por fecha de modificación (más reciente primero)
@@ -101,6 +114,8 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   Future<void> _startRecording() async {
+    if (!_isRecorderInitialized) return;
+
     try {
       // Solicitar permisos
       final status = await Permission.microphone.request();
@@ -127,17 +142,15 @@ class _RecordScreenState extends State<RecordScreen> {
       // Crear ruta para la nueva grabación
       final filePath = path.join(
         recordingsPath,
-        'recording_${DateTime.now().millisecondsSinceEpoch}.m4a',
+        'recording_${DateTime.now().millisecondsSinceEpoch}.aac',
       );
 
+      _currentRecordingPath = filePath;
+
       // Iniciar grabación
-      await _audioRecorder.start(
-        const RecordConfig(
-          encoder: AudioEncoder.aacLc,
-          bitRate: 128000,
-          sampleRate: 44100,
-        ),
-        path: filePath,
+      await _audioRecorder!.startRecorder(
+        toFile: filePath,
+        codec: Codec.aacADTS,
       );
 
       if (mounted) {
@@ -160,8 +173,10 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   Future<void> _pauseRecording() async {
+    if (!_isRecorderInitialized) return;
+
     try {
-      await _audioRecorder.pause();
+      await _audioRecorder!.pauseRecorder();
       if (mounted) {
         setState(() {
           _isPaused = true;
@@ -173,8 +188,10 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   Future<void> _resumeRecording() async {
+    if (!_isRecorderInitialized) return;
+
     try {
-      await _audioRecorder.resume();
+      await _audioRecorder!.resumeRecorder();
       if (mounted) {
         setState(() {
           _isPaused = false;
@@ -186,8 +203,11 @@ class _RecordScreenState extends State<RecordScreen> {
   }
 
   Future<void> _stopRecording() async {
+    if (!_isRecorderInitialized) return;
+
     try {
-      final filePath = await _audioRecorder.stop();
+      await _audioRecorder!.stopRecorder();
+
       if (mounted) {
         setState(() {
           _isRecording = false;
@@ -195,8 +215,8 @@ class _RecordScreenState extends State<RecordScreen> {
         });
       }
 
-      if (filePath != null) {
-        debugPrint('Grabación guardada en: $filePath');
+      if (_currentRecordingPath != null) {
+        debugPrint('Grabación guardada en: $_currentRecordingPath');
         await _loadRecordings();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -228,7 +248,7 @@ class _RecordScreenState extends State<RecordScreen> {
         await _audioPlayer.resume();
       } else {
         await _audioPlayer.stop();
-        await _audioPlayer.play(DeviceFileSource(filePath));
+        await _audioPlayer.play(ap.DeviceFileSource(filePath));
         setState(() {
           _currentlyPlayingPath = filePath;
         });
@@ -255,10 +275,10 @@ class _RecordScreenState extends State<RecordScreen> {
           _isPlaying = false;
         });
       }
-      
+
       await file.delete();
       await _loadRecordings();
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -289,7 +309,11 @@ class _RecordScreenState extends State<RecordScreen> {
 
   String _getRecordingName(File file) {
     final fileName = path.basename(file.path);
-    final timestamp = fileName.replaceAll('recording_', '').replaceAll('.m4a', '');
+    final timestamp = fileName
+        .replaceAll('recording_', '')
+        .replaceAll('.aac', '')
+        .replaceAll('.mp3', '')
+        .replaceAll('.wav', '');
     try {
       final milliseconds = int.parse(timestamp);
       final date = DateTime.fromMillisecondsSinceEpoch(milliseconds);
@@ -301,7 +325,8 @@ class _RecordScreenState extends State<RecordScreen> {
 
   @override
   void dispose() {
-    _audioRecorder.dispose();
+    _audioRecorder?.closeRecorder();
+    _audioRecorder = null;
     _audioPlayer.dispose();
     super.dispose();
   }
@@ -309,7 +334,7 @@ class _RecordScreenState extends State<RecordScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Column(
       children: [
         // Sección de grabación
@@ -356,7 +381,9 @@ class _RecordScreenState extends State<RecordScreen> {
                   ] else
                     FloatingActionButton.large(
                       heroTag: 'record',
-                      onPressed: _startRecording,
+                      onPressed: _isRecorderInitialized
+                          ? _startRecording
+                          : null,
                       child: const Icon(Icons.fiber_manual_record, size: 32),
                     ),
                 ],
@@ -364,9 +391,9 @@ class _RecordScreenState extends State<RecordScreen> {
             ],
           ),
         ),
-        
+
         const SizedBox(height: 16),
-        
+
         // Lista de grabaciones
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -383,35 +410,25 @@ class _RecordScreenState extends State<RecordScreen> {
             ],
           ),
         ),
-        
+
         const SizedBox(height: 8),
-        
+
         Expanded(
           child: _recordings.isEmpty
               ? Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
-                        Icons.audiotrack,
-                        size: 64,
-                        color: Colors.grey[400],
-                      ),
+                      Icon(Icons.audiotrack, size: 64, color: Colors.grey[400]),
                       const SizedBox(height: 16),
                       Text(
                         'No hay grabaciones',
-                        style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 18, color: Colors.grey[600]),
                       ),
                       const SizedBox(height: 8),
                       Text(
                         'Graba audio para verlo aquí',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[500],
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.grey[500]),
                       ),
                     ],
                   ),
@@ -421,8 +438,9 @@ class _RecordScreenState extends State<RecordScreen> {
                   itemCount: _recordings.length,
                   itemBuilder: (context, index) {
                     final recording = _recordings[index];
-                    final isPlaying = _currentlyPlayingPath == recording.path && _isPlaying;
-                    
+                    final isPlaying =
+                        _currentlyPlayingPath == recording.path && _isPlaying;
+
                     return Card(
                       margin: const EdgeInsets.only(bottom: 8.0),
                       child: ListTile(
@@ -446,7 +464,7 @@ class _RecordScreenState extends State<RecordScreen> {
                                   LinearProgressIndicator(
                                     value: _totalDuration.inMilliseconds > 0
                                         ? _currentPosition.inMilliseconds /
-                                            _totalDuration.inMilliseconds
+                                              _totalDuration.inMilliseconds
                                         : 0,
                                   ),
                                   const SizedBox(height: 4),
@@ -476,7 +494,9 @@ class _RecordScreenState extends State<RecordScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Eliminar grabación'),
-        content: const Text('¿Estás seguro de que quieres eliminar esta grabación?'),
+        content: const Text(
+          '¿Estás seguro de que quieres eliminar esta grabación?',
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
