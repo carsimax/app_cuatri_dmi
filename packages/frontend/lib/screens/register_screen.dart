@@ -5,7 +5,7 @@ import '../widgets/custom_text_field.dart';
 import '../widgets/custom_button.dart';
 import '../widgets/error_message.dart';
 import '../utils/validators.dart';
-import 'home_screen.dart';
+import '../widgets/navigation_bar.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -35,13 +35,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    
+
     _nombreFocusNode.dispose();
     _apellidoFocusNode.dispose();
     _emailFocusNode.dispose();
     _passwordFocusNode.dispose();
     _confirmPasswordFocusNode.dispose();
-    
+
     super.dispose();
   }
 
@@ -51,7 +51,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    
+
     final success = await authProvider.register(
       email: _emailController.text.trim(),
       password: _passwordController.text,
@@ -61,7 +61,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     if (success && mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const AppNavigationBar()),
       );
     }
   }
@@ -183,7 +183,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         Icons.lock_outline,
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
-                      onSubmitted: (_) => _confirmPasswordFocusNode.requestFocus(),
+                      onSubmitted: (_) =>
+                          _confirmPasswordFocusNode.requestFocus(),
                     ),
 
                     const SizedBox(height: 20),

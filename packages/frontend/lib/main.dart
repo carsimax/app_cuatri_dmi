@@ -37,6 +37,8 @@ class MainApp extends StatelessWidget {
       child: MaterialApp(
         title: AppConstants.appName,
         debugShowCheckedModeBanner: false,
+        // Forzar tema claro para evitar problemas de contraste
+        themeMode: ThemeMode.light,
         // Configuración del tema - Cambiar seedColor para cambiar esquema de colores
         theme: ThemeData(
           useMaterial3: true,
@@ -46,7 +48,7 @@ class MainApp extends StatelessWidget {
             brightness: Brightness.light,
           ),
         ),
-        // Tema oscuro opcional
+        // Tema oscuro opcional (deshabilitado con themeMode: ThemeMode.light)
         darkTheme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(

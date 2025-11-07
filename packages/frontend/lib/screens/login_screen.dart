@@ -6,7 +6,7 @@ import '../widgets/custom_button.dart';
 import '../widgets/error_message.dart';
 import '../utils/validators.dart';
 import 'register_screen.dart';
-import 'home_screen.dart';
+import '../widgets/navigation_bar.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (success && mounted) {
       Navigator.of(context).pushReplacement(
-        MaterialPageRoute(builder: (context) => const HomeScreen()),
+        MaterialPageRoute(builder: (context) => const AppNavigationBar()),
       );
     }
   }
@@ -63,9 +63,11 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       await context.read<AuthProvider>().loginWithGoogle();
-      // Navegar a home
+      // Navegar a home (barra de navegación)
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (context) => const AppNavigationBar()),
+        );
       }
     } catch (e) {
       if (mounted) {
