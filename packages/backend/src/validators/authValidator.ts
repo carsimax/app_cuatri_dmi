@@ -131,3 +131,25 @@ export const verifyEmailValidator = [
     .isLength({ min: 64, max: 64 })
     .withMessage('Token de verificación inválido'),
 ];
+
+/**
+ * Validaciones para login con Firebase
+ */
+export const firebaseLoginValidator = [
+  body('idToken')
+    .notEmpty()
+    .withMessage('El idToken de Firebase es requerido')
+    .isString()
+    .withMessage('El idToken debe ser una cadena válida'),
+];
+
+/**
+ * Validaciones para registrar token FCM
+ */
+export const fcmTokenValidator = [
+  body('fcmToken')
+    .notEmpty()
+    .withMessage('El token FCM es requerido')
+    .isString()
+    .withMessage('El token FCM debe ser una cadena válida'),
+];

@@ -6,7 +6,9 @@ import {
   validateSession,
   updateProfile,
   changePassword,
-  verifyEmail
+  verifyEmail,
+  firebaseLogin,
+  registerFcmToken,
 } from '../controllers/authController';
 import { authenticate } from '../middlewares/auth';
 import { validate } from '../middlewares/validator';
@@ -15,7 +17,9 @@ import {
   loginValidator,
   updateProfileValidator,
   changePasswordValidator,
-  verifyEmailValidator
+  verifyEmailValidator,
+  firebaseLoginValidator,
+  fcmTokenValidator,
 } from '../validators/authValidator';
 
 const router = Router();
@@ -68,5 +72,19 @@ router.put('/change-password', authenticate, validate(changePasswordValidator), 
  * @access  Public
  */
 router.post('/verify-email', validate(verifyEmailValidator), verifyEmail);
+
+/**
+ * @route   POST /api/auth/firebase-login
+ * @desc    Login con token de Firebase
+ * @access  Public
+ */
+router.post('/firebase-login', validate(firebaseLoginValidator), firebaseLogin);
+
+/**
+ * @route   POST /api/auth/fcm-token
+ * @desc    Registrar token de Firebase Cloud Messaging para el usuario autenticado
+ * @access  Private
+ */
+router.post('/fcm-token', authenticate, validate(fcmTokenValidator), registerFcmToken);
 
 export default router;
